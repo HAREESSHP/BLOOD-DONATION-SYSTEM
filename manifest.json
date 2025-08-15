@@ -1,0 +1,16 @@
+{
+  "name": "BloodConnect",
+  "short_name": "BloodConnect",
+  "description": "Connect blood donors with recipients in need",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#e53935",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

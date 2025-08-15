@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BloodConnect</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" href="favicon.ico"/>
+</head>
+<body>
+  <main>
+    <section>
+      <button onclick="showDonorForm()">Become a Donor</button>
+      <button onclick="showReceiverForm()">Request Blood</button>
+    </section>
+    <div id="messageFeed"></div>
+  </main>
+
+  <!-- Donor Modal -->
+  <div id="donorModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeDonorForm()">&times;</span>
+      <h2>Donor Registration</h2>
+      <form id="donorForm">
+        <input type="text" name="donorName" placeholder="Name" required />
+        <input type="email" name="donorEmail" placeholder="Email" required />
+        <select name="bloodGroup" required>
+          <option value="">Blood Group</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+        <input type="tel" name="donorPhone" placeholder="Phone" required />
+        <select name="donorLocation" required>
+          <option value="">Select Location</option>
+          <option value="Warangal">Warangal</option>
+          <option value="Hyderabad">Hyderabad</option>
+          <option value="Karimnagar">Karimnagar</option>
+          <option value="Nizamabad">Nizamabad</option>
+          <option value="Khammam">Khammam</option>
+          <option value="Adilabad">Adilabad</option>
+          <option value="Nalgonda">Nalgonda</option>
+          <option value="Mahbubnagar">Mahbubnagar</option>
+          <option value="Ramagundam">Ramagundam</option>
+          <option value="Siddipet">Siddipet</option>
+        </select>
+        <label>
+          <input type="checkbox" name="enableNotifications" />
+          Enable Notifications
+        </label>
+        <button type="submit">Register</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Receiver Modal -->
+  <div id="receiverModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" onclick="closeReceiverForm()">&times;</span>
+      <h2>Blood Request</h2>
+      <form id="receiverForm">
+        <input type="text" name="receiverName" placeholder="Your Name" required />
+        <input type="email" name="receiverEmail" placeholder="Your Email" required />
+        <select name="requiredBloodGroup" required>
+          <option value="">Blood Group</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+        <input type="tel" name="receiverPhone" placeholder="Phone" required />
+        <input type="text" name="hospitalName" placeholder="Hospital Name" required />
+        <select name="hospitalLocation" required>
+          <option value="">Select Location</option>
+          <option value="Warangal">Warangal</option>
+          <option value="Hyderabad">Hyderabad</option>
+          <option value="Karimnagar">Karimnagar</option>
+          <option value="Nizamabad">Nizamabad</option>
+          <option value="Khammam">Khammam</option>
+          <option value="Adilabad">Adilabad</option>
+          <option value="Nalgonda">Nalgonda</option>
+          <option value="Mahbubnagar">Mahbubnagar</option>
+          <option value="Ramagundam">Ramagundam</option>
+          <option value="Siddipet">Siddipet</option>
+        </select>
+        <select name="urgency" required>
+          <option value="">Urgency</option>
+          <option value="critical">Critical</option>
+          <option value="urgent">Urgent</option>
+          <option value="normal">Normal</option>
+        </select>
+        <textarea name="notes" placeholder="Any additional notes"></textarea>
+        <button type="submit">Request Blood</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
