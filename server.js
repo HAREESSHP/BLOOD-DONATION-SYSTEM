@@ -682,6 +682,13 @@ app.get('/blood-request', async (req, res) => {
 
 // Start server
 const port = process.env.PORT || 5500;
-app.listen(port, () => {
-  console.log(`Server started on port ${port}`);
-});
+
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Server started on port ${port}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;
