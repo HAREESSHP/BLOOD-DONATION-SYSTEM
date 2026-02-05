@@ -117,17 +117,16 @@ function authMiddleware(req, res, next) {
 
 // Initialize default admin user if none exists
 async function initDefaultAdmin() {
-  const adminExists = await BloodBankUserModel.findOne({ role: 'admin' });
-  if (!adminExists) {
-    await BloodBankUserModel.create({
-      username: 'Pavan',
-      password: hashPassword('Pavan123'),
-      name: 'Administrator',
-      role: 'admin',
-      bloodBankName: 'Central Blood Bank'
-    });
-    console.log('Default admin created: username=Pavan, password=Pavan123');
-  }
+  // Delete old admin and create new one with updated credentials
+  await BloodBankUserModel.deleteMany({ role: 'admin' });
+  await BloodBankUserModel.create({
+    username: 'Pavan',
+    password: hashPassword('Pavan123'),
+    name: 'Administrator',
+    role: 'admin',
+    bloodBankName: 'Central Blood Bank'
+  });
+  console.log('Admin reset: username=Pavan, password=Pavan123');
 }
 initDefaultAdmin();
 
