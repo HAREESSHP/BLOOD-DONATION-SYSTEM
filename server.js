@@ -117,16 +117,27 @@ function authMiddleware(req, res, next) {
 
 // Initialize default admin user if none exists
 async function initDefaultAdmin() {
-  // Delete old admin and create new one with updated credentials
-  await BloodBankUserModel.deleteMany({ role: 'admin' });
-  await BloodBankUserModel.create({
-    username: 'Pavan',
-    password: hashPassword('Pavan123'),
-    name: 'Administrator',
-    role: 'admin',
-    bloodBankName: 'Central Blood Bank'
-  });
-  console.log('Admin reset: username=Pavan, password=Pavan123');
+  try {
+    // Force update or create admin user with correct credentials
+    const hashedPwd = hashPassword('Pavan123');
+    console.log('Admin password hash:', hashedPwd.substring(0, 20) + '...');
+    
+    const result = await BloodBankUserModel.findOneAndUpdate(
+      { username: 'Pavan' },
+      {
+        username: 'Pavan',
+        password: hashedPwd,
+        name: 'Administrator',
+        role: 'admin',
+        bloodBankName: 'Central Blood Bank',
+        isActive: true
+      },
+      { upsert: true, new: true }
+    );
+    console.log('Admin user ready: username=Pavan, password=Pavan123');
+  } catch (err) {
+    console.error('Error initializing admin:', err.message);
+  }
 }
 initDefaultAdmin();
 
@@ -174,16 +185,55 @@ const MessageModel = mongoose.model('Message', messageSchema);
 
 // ==================== Blood Bank Authentication Routes ====================
 
+// Initialize/reset admin endpoint (call this once on Vercel to set up admin)
+app.get('/api/bloodbank/init-admin', async (req, res) => {
+  try {
+    const existingAdmin = await BloodBankUserModel.findOne({ username: 'Pavan' });
+    if (existingAdmin) {
+      existingAdmin.password = hashPassword('Pavan123');
+      existingAdmin.isActive = true;
+      existingAdmin.role = 'admin';
+      await existingAdmin.save();
+      return res.json({ message: 'Admin password updated successfully' });
+    }
+    
+    await BloodBankUserModel.create({
+      username: 'Pavan',
+      password: hashPassword('Pavan123'),
+      name: 'Administrator',
+      role: 'admin',
+      bloodBankName: 'Central Blood Bank',
+      isActive: true
+    });
+    res.json({ message: 'Admin created successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error: ' + err.message });
+  }
+});
+
 // Login
 app.post('/api/bloodbank/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('Login attempt:', { username, passwordLength: password?.length });
+    
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
     
     const user = await BloodBankUserModel.findOne({ username, isActive: true });
-    if (!user || user.password !== hashPassword(password)) {
+    console.log('User found:', user ? { id: user._id, username: user.username, isActive: user.isActive } : 'null');
+    
+    if (!user) {
+      console.log('User not found for username:', username);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    
+    const inputHash = hashPassword(password);
+    const match = user.password === inputHash;
+    console.log('Password match:', match);
+    
+    if (!match) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
