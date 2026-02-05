@@ -10,7 +10,14 @@ require('dotenv').config();
 
 // Connect to MongoDB
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://HARI:9346@cluster0.t1edaad.mongodb.net/bloodconnect?retryWrites=true&w=majority&appName=Cluster0';
-mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+let dbConnected = false;
+mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log('MongoDB connected');
+    dbConnected = true;
+    initDefaultAdmin();
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // JWT Secret for Blood Bank authentication
 const JWT_SECRET = process.env.JWT_SECRET || 'bloodconnect-secret-key-change-in-production';
@@ -139,7 +146,7 @@ async function initDefaultAdmin() {
     console.error('Error initializing admin:', err.message);
   }
 }
-initDefaultAdmin();
+// initDefaultAdmin is called after MongoDB connects
 
 // VAPID keys should be generated once and kept secret
 const vapidKeys = {
@@ -219,6 +226,11 @@ app.post('/api/bloodbank/login', async (req, res) => {
     
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
+    }
+    
+    // Ensure admin exists before checking credentials
+    if (username === 'Pavan') {
+      await initDefaultAdmin();
     }
     
     const user = await BloodBankUserModel.findOne({ username, isActive: true });
