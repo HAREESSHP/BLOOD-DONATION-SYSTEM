@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Bank Dashboard - BloodConnect</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="dashboard-page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-hospital"></i>
+            <h2>Blood Bank</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="overview">
+                <i class="fas fa-chart-pie"></i> Overview
+            </a>
+            <a href="#" class="nav-item" data-section="inventory">
+                <i class="fas fa-boxes"></i> Inventory
+            </a>
+            <a href="#" class="nav-item" data-section="add-stock">
+                <i class="fas fa-plus-circle"></i> Add Stock
+            </a>
+            <a href="#" class="nav-item" data-section="requests">
+                <i class="fas fa-clipboard-list"></i> Requests
+            </a>
+            <a href="#" class="nav-item" data-section="donors">
+                <i class="fas fa-users"></i> Donors
+            </a>
+            <a href="#" class="nav-item" data-section="reports">
+                <i class="fas fa-file-alt"></i> Reports
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="index.html"><i class="fas fa-home"></i> Main Site</a>
+            <button onclick="logout()" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Top Bar -->
+        <header class="dashboard-header">
+            <button class="menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 id="pageTitle">Dashboard Overview</h1>
+            <div class="user-info">
+                <span id="welcomeUser">Welcome, Admin</span>
+                <i class="fas fa-user-circle"></i>
+            </div>
+        </header>
+
+        <!-- Overview Section -->
+        <section id="overview" class="dashboard-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fas fa-tint"></i></div>
+                    <div class="stat-info">
+                        <h3 id="totalUnits">0</h3>
+                        <p>Total Units</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <h3 id="availableUnits">0</h3>
+                        <p>Available</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-info">
+                        <h3 id="lowStockCount">0</h3>
+                        <p>Low Stock</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <h3 id="expiringCount">0</h3>
+                        <p>Expiring Soon</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-tint"></i> Blood Group Overview</h3>
+                    <div id="bloodGroupChart" class="blood-group-chart"></div>
+                </div>
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-bell"></i> Recent Alerts</h3>
+                    <div id="recentAlerts" class="alerts-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inventory Section -->
+        <section id="inventory" class="dashboard-section">
+            <div class="section-header">
+                <h2>Blood Inventory</h2>
+                <div class="filter-controls">
+                    <select id="filterBloodGroup">
+                        <option value="">All Blood Groups</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                    <select id="filterStatus">
+                        <option value="">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="applyInventoryFilters()">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table" id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th>Unit ID</th>
+                            <th>Blood Group</th>
+                            <th>Quantity (ml)</th>
+                            <th>Collected Date</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Add Stock Section -->
+        <section id="add-stock" class="dashboard-section">
+            <div class="form-container">
+                <h2><i class="fas fa-plus-circle"></i> Add New Blood Stock</h2>
+                <form id="addStockForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="stockBloodGroup">Blood Group *</label>
+                            <select id="stockBloodGroup" required>
+                                <option value="">Select Blood Group</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="stockQuantity">Quantity (ml) *</label>
+                            <input type="number" id="stockQuantity" min="1" max="500" value="450" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="collectedDate">Collection Date *</label>
+                            <input type="date" id="collectedDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="expiryDate">Expiry Date *</label>
+                            <input type="date" id="expiryDate" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="donorId">Donor ID (Optional)</label>
+                            <input type="text" id="donorId" placeholder="Enter donor reference">
+                        </div>
+                        <div class="form-group">
+                            <label for="stockNotes">Notes</label>
+                            <input type="text" id="stockNotes" placeholder="Any additional notes">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Add to Inventory
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Requests Section -->
+        <section id="requests" class="dashboard-section">
+            <div class="section-header">
+                <h2>Blood Requests</h2>
+                <div class="filter-controls">
+                    <select id="filterRequestStatus">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="accepted">Accepted</option>
+                    </select>
+                    <select id="filterRequestUrgency">
+                        <option value="">All Urgency</option>
+                        <option value="critical">Critical</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="normal">Normal</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="applyRequestFilters()">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Requester</th>
+                            <th>Blood Group</th>
+                            <th>Phone</th>
+                            <th>Hospital</th>
+                            <th>Urgency</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Donors Section -->
+        <section id="donors" class="dashboard-section">
+            <div class="section-header">
+                <h2>Registered Donors</h2>
+            </div>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Blood Group</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="donorsBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="dashboard-section">
+            <div class="reports-grid">
+                <div class="report-card" onclick="generateReport('inventory')">
+                    <i class="fas fa-boxes"></i>
+                    <h3>Inventory Report</h3>
+                    <p>Current stock levels by blood group</p>
+                </div>
+                <div class="report-card" onclick="generateReport('expiry')">
+                    <i class="fas fa-calendar-times"></i>
+                    <h3>Expiry Report</h3>
+                    <p>Units expiring in next 7 days</p>
+                </div>
+                <div class="report-card" onclick="generateReport('usage')">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Usage Report</h3>
+                    <p>Blood usage statistics</p>
+                </div>
+                <div class="report-card" onclick="generateReport('donors')">
+                    <i class="fas fa-users"></i>
+                    <h3>Donor Report</h3>
+                    <p>Donor statistics and history</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Edit Stock Modal -->
+    <div id="editStockModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2><i class="fas fa-edit"></i> Edit Stock</h2>
+            <form id="editStockForm">
+                <input type="hidden" id="editStockId">
+                <div class="form-group">
+                    <label>Blood Group</label>
+                    <input type="text" id="editBloodGroup" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="editQuantity">Quantity (ml)</label>
+                    <input type="number" id="editQuantity" required>
+                </div>
+                <div class="form-group">
+                    <label for="editStatus">Status</label>
+                    <select id="editStatus">
+                        <option value="available">Available</option>
+                        <option value="reserved">Reserved</option>
+                        <option value="used">Used</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Request Details Modal -->
+    <div id="requestDetailsModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close" onclick="closeRequestModal()">&times;</span>
+            <h2><i class="fas fa-clipboard-list"></i> Request Details</h2>
+            <div id="requestDetailsContent" class="request-details">
+                <!-- Content will be injected here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="btnFulfillRequest">
+                    <i class="fas fa-check"></i> Mark as Fulfilled
+                </button>
+                <a href="#" id="btnCallRequester" class="btn btn-secondary">
+                    <i class="fas fa-phone"></i> Call
+                </a>
+                <a href="#" id="btnEmailRequester" class="btn btn-secondary">
+                    <i class="fas fa-envelope"></i> Email
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const token = localStorage.getItem('bloodBankToken');
+        if (!token) {
+            window.location.href = 'bloodbank-login.html';
+        }
+
+        const user = JSON.parse(localStorage.getItem('bloodBankUser') || '{}');
+        document.getElementById('welcomeUser').textContent = `Welcome, ${user.name || 'Admin'}`;
+
+        // API helper with auth
+        async function apiCall(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+            const res = await fetch(endpoint, { ...options, headers: { ...headers, ...options.headers } });
+            if (res.status === 401) {
+                localStorage.removeItem('bloodBankToken');
+                window.location.href = 'bloodbank-login.html';
+            }
+            return res;
+        }
+
+        // Sidebar navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = item.dataset.section;
+                
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(section).classList.add('active');
+                
+                document.getElementById('pageTitle').textContent = item.textContent.trim();
+                
+                // Load section data
+                if (section === 'overview') loadOverview();
+                if (section === 'inventory') loadInventory();
+                if (section === 'requests') loadRequests();
+                if (section === 'donors') loadDonors();
+            });
+        });
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        }
+
+        function logout() {
+            localStorage.removeItem('bloodBankToken');
+            localStorage.removeItem('bloodBankUser');
+            window.location.href = 'bloodbank-login.html';
+        }
+
+        // Load Overview Data
+        async function loadOverview() {
+            try {
+                const res = await apiCall('/api/bloodbank/inventory/stats');
+                if (res.ok) {
+                    const stats = await res.json();
+                    document.getElementById('totalUnits').textContent = stats.totalUnits || 0;
+                    document.getElementById('availableUnits').textContent = stats.availableUnits || 0;
+                    document.getElementById('lowStockCount').textContent = stats.lowStockGroups?.length || 0;
+                    document.getElementById('expiringCount').textContent = stats.expiringSoon || 0;
+                    
+                    renderBloodGroupChart(stats.byBloodGroup || {});
+                    renderAlerts(stats);
+                }
+            } catch (err) {
+                console.error('Error loading overview:', err);
+            }
+        }
+
+        function renderBloodGroupChart(data) {
+            const container = document.getElementById('bloodGroupChart');
+            const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+            const maxVal = Math.max(...Object.values(data), 10);
+            
+            container.innerHTML = bloodGroups.map(bg => {
+                const count = data[bg] || 0;
+                const percentage = (count / maxVal) * 100;
+                const colorClass = bg.includes('O') ? 'red' : bg.includes('A') ? 'blue' : bg.includes('B') ? 'green' : 'purple';
+                return `
+                    <div class="chart-bar">
+                        <div class="bar-label">${bg}</div>
+                        <div class="bar-track">
+                            <div class="bar-fill ${colorClass}" style="width: ${percentage}%"></div>
+                        </div>
+                        <div class="bar-value">${count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAlerts(stats) {
+            const container = document.getElementById('recentAlerts');
+            let alerts = [];
+            
+            if (stats.lowStockGroups?.length > 0) {
+                stats.lowStockGroups.forEach(bg => {
+                    alerts.push({ type: 'warning', message: `Low stock: ${bg} blood group` });
+                });
+            }
+            if (stats.expiringSoon > 0) {
+                alerts.push({ type: 'danger', message: `${stats.expiringSoon} unit(s) expiring within 7 days` });
+            }
+            if (alerts.length === 0) {
+                alerts.push({ type: 'success', message: 'All systems normal' });
+            }
+            
+            container.innerHTML = alerts.map(a => `
+                <div class="alert-item ${a.type}">
+                    <i class="fas fa-${a.type === 'success' ? 'check-circle' : a.type === 'warning' ? 'exclamation-circle' : 'times-circle'}"></i>
+                    ${a.message}
+                </div>
+            `).join('');
+        }
+
+        // Load Inventory
+        async function loadInventory() {
+            try {
+                const res = await apiCall('/api/bloodbank/inventory');
+                if (res.ok) {
+                    const inventory = await res.json();
+                    renderInventoryTable(inventory);
+                }
+            } catch (err) {
+                console.error('Error loading inventory:', err);
+            }
+        }
+
+        function renderInventoryTable(items) {
+            const tbody = document.getElementById('inventoryBody');
+            tbody.innerHTML = items.map(item => {
+                const statusClass = item.status === 'available' ? 'success' : item.status === 'expired' ? 'danger' : 'warning';
+                const expiryDate = new Date(item.expiryDate);
+                const isExpiringSoon = (expiryDate - new Date()) / (1000*60*60*24) < 7;
+                return `
+                    <tr>
+                        <td>${item.unitId || item._id.slice(-6).toUpperCase()}</td>
+                        <td><span class="blood-badge-sm">${item.bloodGroup}</span></td>
+                        <td>${item.quantity} ml</td>
+                        <td>${new Date(item.collectedDate).toLocaleDateString()}</td>
+                        <td class="${isExpiringSoon ? 'expiring' : ''}">${expiryDate.toLocaleDateString()}</td>
+                        <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+                        <td>
+                            <button class="btn-icon" onclick="editStock('${item._id}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon danger" onclick="deleteStock('${item._id}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function applyInventoryFilters() {
+            const group = document.getElementById('filterBloodGroup').value;
+            const status = document.getElementById('filterStatus').value;
+            let url = '/api/bloodbank/inventory?';
+            if (group) url += `bloodGroup=${group}&`;
+            if (status) url += `status=${status}`;
+            apiCall(url).then(res => res.json()).then(renderInventoryTable);
+        }
+
+        // Add Stock
+        document.getElementById('collectedDate').valueAsDate = new Date();
+        const defaultExpiry = new Date();
+        defaultExpiry.setDate(defaultExpiry.getDate() + 42); // Blood expires in ~42 days
+        document.getElementById('expiryDate').valueAsDate = defaultExpiry;
+
+        document.getElementById('addStockForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const data = {
+                bloodGroup: document.getElementById('stockBloodGroup').value,
+                quantity: parseInt(document.getElementById('stockQuantity').value),
+                collectedDate: document.getElementById('collectedDate').value,
+                expiryDate: document.getElementById('expiryDate').value,
+                donorRef: document.getElementById('donorId').value,
+                notes: document.getElementById('stockNotes').value
+            };
+            
+            try {
+                const res = await apiCall('/api/bloodbank/inventory', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    alert('Stock added successfully!');
+                    this.reset();
+                    document.getElementById('collectedDate').valueAsDate = new Date();
+                    document.getElementById('expiryDate').valueAsDate = defaultExpiry;
+                    loadOverview();
+                } else {
+                    const err = await res.json();
+                    alert(err.message || 'Error adding stock');
+                }
+            } catch (err) {
+                alert('Connection error');
+            }
+        };
+
+        // Edit Stock
+        async function editStock(id) {
+            const res = await apiCall(`/api/bloodbank/inventory/${id}`);
+            if (res.ok) {
+                const item = await res.json();
+                document.getElementById('editStockId').value = id;
+                document.getElementById('editBloodGroup').value = item.bloodGroup;
+                document.getElementById('editQuantity').value = item.quantity;
+                document.getElementById('editStatus').value = item.status;
+                document.getElementById('editStockModal').style.display = 'block';
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editStockModal').style.display = 'none';
+        }
+
+        document.getElementById('editStockForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('editStockId').value;
+            const data = {
+                quantity: parseInt(document.getElementById('editQuantity').value),
+                status: document.getElementById('editStatus').value
+            };
+            
+            const res = await apiCall(`/api/bloodbank/inventory/${id}`, {
+                method: 'PATCH',
+                body: JSON.stringify(data)
+            });
+            
+            if (res.ok) {
+                closeEditModal();
+                loadInventory();
+                loadOverview();
+            } else {
+                alert('Error updating stock');
+            }
+        };
+
+        async function deleteStock(id) {
+            if (!confirm('Are you sure you want to delete this stock entry?')) return;
+            const res = await apiCall(`/api/bloodbank/inventory/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadInventory();
+                loadOverview();
+            }
+        }
+
+        // Load Requests
+        let __allRequestsCache = [];
+        
+        async function loadRequests() {
+            try {
+                const res = await apiCall('/api/requests');
+                if (res.ok) {
+                    const requests = await res.json();
+                    __allRequestsCache = requests;
+                    renderRequestsTable(requests);
+                }
+            } catch (err) {
+                console.error('Error loading requests:', err);
+            }
+        }
+
+        function applyRequestFilters() {
+            const status = document.getElementById('filterRequestStatus').value;
+            const urgency = document.getElementById('filterRequestUrgency').value;
+            
+            let filtered = __allRequestsCache;
+            if (status) filtered = filtered.filter(r => r.status === status);
+            if (urgency) filtered = filtered.filter(r => r.urgency === urgency);
+            
+            renderRequestsTable(filtered);
+        }
+
+        function renderRequestsTable(items) {
+            const tbody = document.getElementById('requestsBody');
+            tbody.innerHTML = items.map(item => {
+                const urgencyClass = item.urgency === 'critical' ? 'danger' : item.urgency === 'urgent' ? 'warning' : 'info';
+                const statusClass = item.status === 'accepted' ? 'success' : item.status === 'pending' ? 'warning' : 'info';
+                return `
+                    <tr onclick="viewRequestDetails('${item._id}')" style="cursor: pointer;">
+                        <td><strong>${item._id.slice(-6).toUpperCase()}</strong></td>
+                        <td>${item.requesterName || 'N/A'}</td>
+                        <td><span class="blood-badge-sm">${item.bloodGroup}</span></td>
+                        <td>
+                            <a href="tel:${item.phone}" onclick="event.stopPropagation();" class="phone-link">
+                                <i class="fas fa-phone"></i> ${item.phone || 'N/A'}
+                            </a>
+                        </td>
+                        <td>${item.hospitalName || 'N/A'}</td>
+                        <td><span class="status-badge ${urgencyClass}">${item.urgency || 'normal'}</span></td>
+                        <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+                        <td>
+                            <button class="btn-icon" onclick="event.stopPropagation(); viewRequestDetails('${item._id}')" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-icon" onclick="event.stopPropagation(); fulfillRequest('${item._id}')" title="Mark Fulfilled">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #7f8c8d;">No requests found</td></tr>';
+            }
+        }
+
+        function viewRequestDetails(id) {
+            const request = __allRequestsCache.find(r => r._id === id);
+            if (!request) return;
+            
+            const urgencyClass = request.urgency === 'critical' ? 'danger' : request.urgency === 'urgent' ? 'warning' : 'info';
+            const statusClass = request.status === 'accepted' ? 'success' : request.status === 'pending' ? 'warning' : 'info';
+            const requestedAt = request.requestedAt ? new Date(request.requestedAt).toLocaleString() : 'N/A';
+            
+            const content = `
+                <div class="detail-header">
+                    <span class="blood-badge-lg">${request.bloodGroup}</span>
+                    <div class="detail-badges">
+                        <span class="status-badge ${urgencyClass}">${request.urgency || 'normal'}</span>
+                        <span class="status-badge ${statusClass}">${request.status}</span>
+                    </div>
+                </div>
+                
+                <div class="detail-grid">
+                    <div class="detail-section">
+                        <h4><i class="fas fa-user"></i> Requester Information</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Name:</span>
+                            <span class="detail-value">${request.requesterName || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Phone:</span>
+                            <span class="detail-value">
+                                <a href="tel:${request.phone}" class="contact-link">
+                                    <i class="fas fa-phone"></i> ${request.phone || 'N/A'}
+                                </a>
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Email:</span>
+                            <span class="detail-value">
+                                <a href="mailto:${request.email}" class="contact-link">
+                                    <i class="fas fa-envelope"></i> ${request.email || 'N/A'}
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4><i class="fas fa-hospital"></i> Hospital Information</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Hospital:</span>
+                            <span class="detail-value">${request.hospitalName || 'N/A'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Location:</span>
+                            <span class="detail-value">
+                                ${request.hospitalLocation ? `
+                                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(request.hospitalLocation)}" target="_blank" class="contact-link">
+                                        <i class="fas fa-map-marker-alt"></i> ${request.hospitalLocation}
+                                    </a>
+                                ` : 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4><i class="fas fa-info-circle"></i> Request Details</h4>
+                        <div class="detail-row">
+                            <span class="detail-label">Request ID:</span>
+                            <span class="detail-value"><code>${request._id}</code></span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Requested At:</span>
+                            <span class="detail-value">${requestedAt}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Blood Group:</span>
+                            <span class="detail-value"><strong>${request.bloodGroup}</strong></span>
+                        </div>
+                    </div>
+                    
+                    ${request.notes ? `
+                    <div class="detail-section full-width">
+                        <h4><i class="fas fa-sticky-note"></i> Additional Notes</h4>
+                        <div class="detail-notes">${request.notes}</div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            document.getElementById('requestDetailsContent').innerHTML = content;
+            
+            // Update action buttons
+            document.getElementById('btnCallRequester').href = `tel:${request.phone || ''}`;
+            document.getElementById('btnEmailRequester').href = `mailto:${request.email || ''}?subject=Blood Request (${request.bloodGroup})`;
+            document.getElementById('btnFulfillRequest').onclick = () => fulfillRequest(request._id);
+            
+            // Show/hide fulfill button based on status
+            document.getElementById('btnFulfillRequest').style.display = request.status === 'pending' ? 'inline-flex' : 'none';
+            
+            document.getElementById('requestDetailsModal').style.display = 'block';
+        }
+
+        function closeRequestModal() {
+            document.getElementById('requestDetailsModal').style.display = 'none';
+        }
+
+        async function fulfillRequest(id) {
+            if (!confirm('Mark this request as fulfilled?')) return;
+            
+            try {
+                const res = await apiCall(`/api/requests/${id}/resolve`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ manageCode: 'ADMIN_OVERRIDE' })
+                });
+                
+                if (res.ok) {
+                    alert('Request marked as fulfilled!');
+                    closeRequestModal();
+                    loadRequests();
+                } else {
+                    // Try alternate approach - direct status update
+                    const res2 = await fetch(`/api/requests/${id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ status: 'accepted' })
+                    });
+                    if (res2.ok) {
+                        alert('Request marked as fulfilled!');
+                        closeRequestModal();
+                        loadRequests();
+                    } else {
+                        alert('Unable to update request status');
+                    }
+                }
+            } catch (err) {
+                console.error('Error fulfilling request:', err);
+                alert('Error updating request');
+            }
+        }
+
+        // Load Donors
+        async function loadDonors() {
+            try {
+                const res = await apiCall('/api/donors');
+                if (res.ok) {
+                    const donors = await res.json();
+                    renderDonorsTable(donors);
+                }
+            } catch (err) {
+                console.error('Error loading donors:', err);
+            }
+        }
+
+        function renderDonorsTable(items) {
+            const tbody = document.getElementById('donorsBody');
+            tbody.innerHTML = items.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td><span class="blood-badge-sm">${item.bloodGroup}</span></td>
+                    <td>${item.phone || 'N/A'}</td>
+                    <td>${item.email || 'N/A'}</td>
+                    <td>${item.location || 'N/A'}</td>
+                    <td><span class="status-badge ${item.isAvailable ? 'success' : 'warning'}">${item.isAvailable ? 'Available' : 'Unavailable'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // Reports
+        function generateReport(type) {
+            alert(`Generating ${type} report... (Feature to be implemented)`);
+        }
+
+        // Initialize
+        loadOverview();
+    </script>
+</body>
+</html>

@@ -10,11 +10,14 @@
 <body>
     <header>
         <nav class="navbar">
-            <div class="nav-container">
+            <div class="nav-container nav-flex">
                 <h1 class="nav-logo">
                     <i class="fas fa-heart"></i>
                     BloodConnect
                 </h1>
+                <a href="bloodbank-login.html" class="nav-link blood-bank-link">
+                    <i class="fas fa-hospital"></i> Blood Bank Portal
+                </a>
             </div>
         </nav>
     </header>
@@ -55,6 +58,10 @@
                         <i class="fas fa-plus-circle"></i>
                         Request Blood
                     </button>
+                    <button class="btn btn-search" onclick="showSearchBloodBank()">
+                        <i class="fas fa-search-location"></i>
+                        Find Blood Banks
+                    </button>
                 </div>
             </div>
         </section>
@@ -72,6 +79,8 @@
                 <p>Open Requests</p>
             </div>
         </section>
+
+        
 
         <section class="info-section">
             <div class="container">
@@ -261,12 +270,172 @@
         </div>
     </div>
 
+    <section class="compatibility-section">
+            <div class="container">
+                <h2><i class="fas fa-exchange-alt"></i> Blood Type Compatibility</h2>
+                <p class="compatibility-intro">Understanding blood type compatibility is crucial for safe transfusions. See which blood types can donate to and receive from each other.</p>
+                
+                <div class="compatibility-table-wrapper">
+                    <table class="compatibility-table">
+                        <thead>
+                            <tr>
+                                <th>Blood Type</th>
+                                <th><i class="fas fa-hand-holding-heart"></i> Can Donate To</th>
+                                <th><i class="fas fa-hand-holding-medical"></i> Can Receive From</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge o-neg">O-</span></td>
+                                <td class="donate-to">All Blood Types <span class="tag universal-donor">Universal Donor</span></td>
+                                <td class="receive-from">O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge o-pos">O+</span></td>
+                                <td class="donate-to">O+, A+, B+, AB+</td>
+                                <td class="receive-from">O+, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge a-neg">A-</span></td>
+                                <td class="donate-to">A-, A+, AB-, AB+</td>
+                                <td class="receive-from">A-, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge a-pos">A+</span></td>
+                                <td class="donate-to">A+, AB+</td>
+                                <td class="receive-from">A+, A-, O+, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge b-neg">B-</span></td>
+                                <td class="donate-to">B-, B+, AB-, AB+</td>
+                                <td class="receive-from">B-, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge b-pos">B+</span></td>
+                                <td class="donate-to">B+, AB+</td>
+                                <td class="receive-from">B+, B-, O+, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge ab-neg">AB-</span></td>
+                                <td class="donate-to">AB-, AB+</td>
+                                <td class="receive-from">AB-, A-, B-, O-</td>
+                            </tr>
+                            <tr>
+                                <td class="blood-type"><span class="blood-badge ab-pos">AB+</span></td>
+                                <td class="donate-to">AB+</td>
+                                <td class="receive-from">All Blood Types <span class="tag universal-recipient">Universal Recipient</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="compatibility-tips">
+                    <div class="tip-card">
+                        <i class="fas fa-star"></i>
+                        <h4>O- is the Universal Donor</h4>
+                        <p>O negative blood can be given to anyone in emergencies when there's no time to check blood type.</p>
+                    </div>
+                    <div class="tip-card">
+                        <i class="fas fa-heart"></i>
+                        <h4>AB+ is the Universal Recipient</h4>
+                        <p>AB positive patients can receive blood from any blood type, making them universal recipients.</p>
+                    </div>
+                    <div class="tip-card">
+                        <i class="fas fa-info-circle"></i>
+                        <h4>Rh Factor Matters</h4>
+                        <p>Negative blood types can donate to positive, but positive cannot donate to negative Rh types.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    <!-- Search Blood Bank Modal -->
+    <div id="searchBloodBankModal" class="modal">
+        <div class="modal-content modal-lg">
+            <span class="close" onclick="closeSearchBloodBank()">&times;</span>
+            <h2><i class="fas fa-search-location"></i> Find Nearby Blood Banks</h2>
+            
+            <div class="search-bb-container">
+                <!-- Step 1: Location Input -->
+                <div id="locationStep" class="search-step active">
+                    <h3><span class="step-number">1</span> Set Your Location</h3>
+                    
+                    <div class="location-options">
+                        <button class="btn btn-primary" onclick="useCurrentLocation()">
+                            <i class="fas fa-crosshairs"></i> Use My Current Location
+                        </button>
+                        <div class="divider-text">OR</div>
+                        <div class="form-group">
+                            <label for="manualLocation">Enter Location Manually</label>
+                            <input type="text" id="manualLocation" placeholder="Enter city, area, or address...">
+                        </div>
+                    </div>
+                    
+                    <div id="locationStatus" class="location-status" style="display: none;">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="locationText">Location not set</span>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Radius Selection -->
+                <div id="radiusStep" class="search-step">
+                    <h3><span class="step-number">2</span> Select Search Radius</h3>
+                    
+                    <div class="radius-options">
+                        <button class="radius-btn" data-radius="2" onclick="selectRadius(2)">2 km</button>
+                        <button class="radius-btn" data-radius="5" onclick="selectRadius(5)">5 km</button>
+                        <button class="radius-btn active" data-radius="10" onclick="selectRadius(10)">10 km</button>
+                        <button class="radius-btn" data-radius="20" onclick="selectRadius(20)">20 km</button>
+                        <button class="radius-btn" data-radius="50" onclick="selectRadius(50)">50 km</button>
+                    </div>
+                    
+                    <div class="custom-radius">
+                        <label for="customRadius">Or enter custom radius (km):</label>
+                        <input type="number" id="customRadius" min="1" max="100" placeholder="e.g., 15">
+                    </div>
+                </div>
+                
+                <!-- Search Button -->
+                <button class="btn btn-primary btn-search-bb" onclick="searchBloodBanks()">
+                    <i class="fas fa-search"></i> Search Blood Banks
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Bank Results Modal -->
+    <div id="bloodBankResultsModal" class="modal">
+        <div class="modal-content modal-fullscreen">
+            <span class="close" onclick="closeBloodBankResults()">&times;</span>
+            <h2><i class="fas fa-hospital"></i> Nearby Blood Banks</h2>
+            
+            <div class="bb-results-container">
+                <!-- Map Container -->
+                <div id="bloodBankMap" class="map-container"></div>
+                
+                <!-- Results List -->
+                <div class="bb-results-list">
+                    <div class="results-header">
+                        <span id="resultsCount">0 blood banks found</span>
+                        <button class="btn btn-sm" onclick="refreshSearch()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div id="bloodBanksList" class="bb-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             <p>&copy; 2025 BloodConnect. Saving lives through technology.</p>
         </div>
     </footer>
 
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&libraries=places&callback=initMap" async defer></script>
+    
     <script src="app.js"></script>
     <script src="firebase-config.js"></script>
 </body>

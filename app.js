@@ -358,3 +358,434 @@ function closeSuccessModal() {
   const modal = document.getElementById('successModal');
   if (modal) modal.style.display = 'none';
 }
+
+// ==================== Blood Bank Search Feature ====================
+
+let userLocation = null;
+let searchRadius = 10; // Default 10km
+let map = null;
+let markers = [];
+let directionsService = null;
+let directionsRenderer = null;
+let placesService = null;
+let googleMapsLoaded = false;
+
+// Handle Google Maps API loading error
+window.gm_authFailure = function() {
+  console.error('Google Maps authentication failed');
+  googleMapsLoaded = false;
+};
+
+// Initialize Google Maps (called by API callback)
+function initMap() {
+  // Map will be initialized when needed
+  googleMapsLoaded = true;
+  console.log('Google Maps API loaded successfully');
+}
+
+// Show search blood bank modal
+function showSearchBloodBank() {
+  console.log('showSearchBloodBank called');
+  const modal = document.getElementById('searchBloodBankModal');
+  if (modal) {
+    modal.style.display = 'block';
+    console.log('Search modal opened');
+  } else {
+    console.error('Search modal not found!');
+  }
+  // Reset state
+  userLocation = null;
+  document.getElementById('locationStatus').style.display = 'none';
+  document.getElementById('manualLocation').value = '';
+}
+
+function closeSearchBloodBank() {
+  document.getElementById('searchBloodBankModal').style.display = 'none';
+}
+
+// Use current GPS location
+function useCurrentLocation() {
+  if (!navigator.geolocation) {
+    showToast('Geolocation is not supported by your browser', 'error');
+    return;
+  }
+  
+  setLoading(true);
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      
+      // Check if Google Maps is loaded for reverse geocoding
+      if (typeof google !== 'undefined' && googleMapsLoaded) {
+        // Reverse geocode to get address
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: userLocation }, (results, status) => {
+          setLoading(false);
+          if (status === 'OK' && results[0]) {
+            document.getElementById('locationText').textContent = results[0].formatted_address;
+          } else {
+            document.getElementById('locationText').textContent = 
+              `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+          }
+          document.getElementById('locationStatus').style.display = 'flex';
+          showToast('Location detected successfully!', 'success');
+        });
+      } else {
+        // Google Maps not loaded, just show coordinates
+        setLoading(false);
+        document.getElementById('locationText').textContent = 
+          `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+        document.getElementById('locationStatus').style.display = 'flex';
+        showToast('Location detected! (Address lookup unavailable)', 'success');
+      }
+    },
+    (error) => {
+      setLoading(false);
+      let message = 'Unable to get your location';
+      if (error.code === 1) message = 'Location access denied. Please enable location permissions.';
+      else if (error.code === 2) message = 'Location unavailable. Please try again.';
+      else if (error.code === 3) message = 'Location request timed out. Please try again.';
+      showToast(message, 'error');
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+// Handle manual location input
+document.addEventListener('DOMContentLoaded', function() {
+  const manualInput = document.getElementById('manualLocation');
+  if (manualInput) {
+    manualInput.addEventListener('change', function() {
+      const address = this.value.trim();
+      if (!address) return;
+      
+      if (typeof google === 'undefined' || !googleMapsLoaded) {
+        showToast('Google Maps is still loading. Please wait and try again.', 'error');
+        return;
+      }
+      
+      setLoading(true);
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: address }, (results, status) => {
+        setLoading(false);
+        if (status === 'OK' && results[0]) {
+          userLocation = {
+            lat: results[0].geometry.location.lat(),
+            lng: results[0].geometry.location.lng()
+          };
+          document.getElementById('locationText').textContent = results[0].formatted_address;
+          document.getElementById('locationStatus').style.display = 'flex';
+          showToast('Location found!', 'success');
+        } else {
+          showToast('Could not find that location. Please try again.', 'error');
+        }
+      });
+    });
+  }
+});
+
+// Select radius
+function selectRadius(radius) {
+  searchRadius = radius;
+  document.querySelectorAll('.radius-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.radius-btn[data-radius="${radius}"]`)?.classList.add('active');
+  document.getElementById('customRadius').value = '';
+}
+
+// Search for blood banks
+function searchBloodBanks() {
+  console.log('searchBloodBanks called');
+  
+  // Check for custom radius
+  const customRadius = document.getElementById('customRadius').value;
+  if (customRadius && parseInt(customRadius) > 0) {
+    searchRadius = parseInt(customRadius);
+  }
+  
+  if (!userLocation) {
+    showToast('Please set your location first', 'error');
+    return;
+  }
+  
+  console.log('Location set:', userLocation);
+  console.log('Search radius:', searchRadius);
+  
+  // Close search modal and open results modal
+  closeSearchBloodBank();
+  const resultsModal = document.getElementById('bloodBankResultsModal');
+  
+  if (!resultsModal) {
+    console.error('Results modal not found!');
+    showToast('Error: Results modal not found', 'error');
+    return;
+  }
+  
+  resultsModal.style.display = 'block';
+  resultsModal.style.visibility = 'visible';
+  resultsModal.style.opacity = '1';
+  console.log('Results modal display set to block');
+  
+  // Show loading state
+  document.getElementById('bloodBanksList').innerHTML = `
+    <div style="text-align: center; padding: 3rem;">
+      <div class="loading" style="width: 40px; height: 40px; border-width: 4px; border-top-color: #e74c3c;"></div>
+      <p style="margin-top: 1rem; color: #7f8c8d;">Searching for blood banks...</p>
+    </div>
+  `;
+  document.getElementById('resultsCount').textContent = 'Searching...';
+  
+  // Initialize map with a small delay to ensure modal is visible
+  setTimeout(() => {
+    initializeBloodBankMap();
+  }, 100);
+}
+
+function initializeBloodBankMap() {
+  const mapContainer = document.getElementById('bloodBankMap');
+  
+  // Check if Google Maps is loaded
+  if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+    document.getElementById('bloodBanksList').innerHTML = `
+      <div class="no-results">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Google Maps failed to load.</p>
+        <p>Please check your internet connection and try again.</p>
+      </div>
+    `;
+    document.getElementById('resultsCount').textContent = 'Error loading maps';
+    return;
+  }
+  
+  // Create map centered on user location
+  map = new google.maps.Map(mapContainer, {
+    center: userLocation,
+    zoom: 13,
+    styles: [
+      { featureType: 'poi.medical', stylers: [{ visibility: 'on' }] },
+      { featureType: 'poi.business', stylers: [{ visibility: 'off' }] }
+    ]
+  });
+  
+  // Add user location marker
+  new google.maps.Marker({
+    position: userLocation,
+    map: map,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 12,
+      fillColor: '#4285F4',
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 3
+    },
+    title: 'Your Location'
+  });
+  
+  // Draw radius circle
+  new google.maps.Circle({
+    map: map,
+    center: userLocation,
+    radius: searchRadius * 1000, // Convert km to meters
+    fillColor: '#e74c3c',
+    fillOpacity: 0.1,
+    strokeColor: '#e74c3c',
+    strokeOpacity: 0.5,
+    strokeWeight: 2
+  });
+  
+  // Initialize services
+  placesService = new google.maps.places.PlacesService(map);
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer({
+    map: map,
+    suppressMarkers: false,
+    polylineOptions: {
+      strokeColor: '#e74c3c',
+      strokeWeight: 5
+    }
+  });
+  
+  // Search for blood banks
+  searchNearbyBloodBanks();
+}
+
+function searchNearbyBloodBanks() {
+  const request = {
+    location: userLocation,
+    radius: searchRadius * 1000,
+    keyword: 'blood bank'
+  };
+  
+  // Clear previous markers
+  markers.forEach(marker => marker.setMap(null));
+  markers = [];
+  
+  placesService.nearbySearch(request, (results, status) => {
+    if (status === google.maps.places.PlacesServiceStatus.OK) {
+      displayBloodBankResults(results);
+    } else {
+      // Try alternative search with different keywords
+      const altRequest = {
+        location: userLocation,
+        radius: searchRadius * 1000,
+        keyword: 'blood donation center hospital blood'
+      };
+      
+      placesService.nearbySearch(altRequest, (altResults, altStatus) => {
+        if (altStatus === google.maps.places.PlacesServiceStatus.OK) {
+          displayBloodBankResults(altResults);
+        } else {
+          document.getElementById('bloodBanksList').innerHTML = `
+            <div class="no-results">
+              <i class="fas fa-search"></i>
+              <p>No blood banks found in this area.</p>
+              <p>Try increasing the search radius.</p>
+            </div>
+          `;
+          document.getElementById('resultsCount').textContent = '0 blood banks found';
+        }
+      });
+    }
+  });
+}
+
+function displayBloodBankResults(places) {
+  const listContainer = document.getElementById('bloodBanksList');
+  document.getElementById('resultsCount').textContent = `${places.length} blood banks found within ${searchRadius} km`;
+  
+  // Sort by distance
+  places.sort((a, b) => {
+    const distA = calculateDistance(userLocation, { lat: a.geometry.location.lat(), lng: a.geometry.location.lng() });
+    const distB = calculateDistance(userLocation, { lat: b.geometry.location.lat(), lng: b.geometry.location.lng() });
+    return distA - distB;
+  });
+  
+  listContainer.innerHTML = places.map((place, index) => {
+    const distance = calculateDistance(userLocation, {
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng()
+    });
+    
+    const rating = place.rating ? `<span class="bb-rating"><i class="fas fa-star"></i> ${place.rating}</span>` : '';
+    const openNow = place.opening_hours?.open_now;
+    const openStatus = openNow !== undefined 
+      ? `<span class="bb-status ${openNow ? 'open' : 'closed'}">${openNow ? 'Open Now' : 'Closed'}</span>`
+      : '';
+    
+    // Add marker to map
+    const marker = new google.maps.Marker({
+      position: place.geometry.location,
+      map: map,
+      icon: {
+        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+        scaledSize: new google.maps.Size(40, 40)
+      },
+      title: place.name,
+      label: {
+        text: String(index + 1),
+        color: 'white',
+        fontWeight: 'bold'
+      }
+    });
+    
+    // Info window
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <div style="padding: 10px; max-width: 200px;">
+          <h4 style="margin: 0 0 5px 0;">${place.name}</h4>
+          <p style="margin: 0; color: #666; font-size: 12px;">${place.vicinity}</p>
+          ${rating}
+        </div>
+      `
+    });
+    
+    marker.addListener('click', () => {
+      infoWindow.open(map, marker);
+    });
+    
+    markers.push(marker);
+    
+    return `
+      <div class="bb-card" onclick="showDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()}, '${place.name.replace(/'/g, "\\'")}')">
+        <div class="bb-card-header">
+          <span class="bb-index">${index + 1}</span>
+          <div class="bb-info">
+            <h4>${place.name}</h4>
+            <p class="bb-address"><i class="fas fa-map-marker-alt"></i> ${place.vicinity}</p>
+          </div>
+        </div>
+        <div class="bb-card-footer">
+          <span class="bb-distance"><i class="fas fa-route"></i> ${distance.toFixed(1)} km</span>
+          ${rating}
+          ${openStatus}
+        </div>
+        <div class="bb-actions">
+          <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()}, '${place.name.replace(/'/g, "\\'")}')">
+            <i class="fas fa-directions"></i> Directions
+          </button>
+          <a href="https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${place.geometry.location.lat()},${place.geometry.location.lng()}" target="_blank" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();">
+            <i class="fas fa-external-link-alt"></i> Open in Maps
+          </a>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Calculate distance between two points (Haversine formula)
+function calculateDistance(point1, point2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+  const dLon = (point2.lng - point1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Show directions to a blood bank
+function showDirections(destLat, destLng, placeName) {
+  const destination = { lat: destLat, lng: destLng };
+  
+  const request = {
+    origin: userLocation,
+    destination: destination,
+    travelMode: google.maps.TravelMode.DRIVING
+  };
+  
+  directionsService.route(request, (result, status) => {
+    if (status === google.maps.DirectionsStatus.OK) {
+      directionsRenderer.setDirections(result);
+      
+      // Show route info
+      const route = result.routes[0].legs[0];
+      showToast(`${placeName}: ${route.distance.text}, ${route.duration.text}`, 'success');
+      
+      // Fit map to show entire route
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(userLocation);
+      bounds.extend(destination);
+      map.fitBounds(bounds);
+    } else {
+      showToast('Could not calculate directions', 'error');
+    }
+  });
+}
+
+// Close blood bank results
+function closeBloodBankResults() {
+  document.getElementById('bloodBankResultsModal').style.display = 'none';
+  // Clear directions
+  if (directionsRenderer) {
+    directionsRenderer.setDirections({ routes: [] });
+  }
+}
+
+// Refresh search
+function refreshSearch() {
+  searchNearbyBloodBanks();
+}

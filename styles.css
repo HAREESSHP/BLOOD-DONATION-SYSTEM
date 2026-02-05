@@ -35,6 +35,34 @@ body {
   padding: 0 20px;
 }
 
+.nav-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 25px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+.blood-bank-link i {
+  font-size: 1.1rem;
+}
+
 .nav-logo {
   font-size: 1.8rem;
   font-weight: bold;
@@ -380,6 +408,374 @@ footer {
   text-align: center;
   padding: 2rem 0;
   margin-top: 4rem;
+}
+
+/* ==================== Blood Compatibility Section ==================== */
+.compatibility-section {
+  padding: 5rem 0;
+  background: linear-gradient(180deg, #ffffff 0%, #fff5f5 50%, #ffe8e8 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.compatibility-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #e74c3c, #c0392b, #e74c3c);
+}
+
+.compatibility-section h2 {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  font-weight: 700;
+}
+
+.compatibility-section h2 i {
+  color: #e74c3c;
+  font-size: 2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.compatibility-intro {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 3rem;
+  color: #5a6c7d;
+  font-size: 1.15rem;
+  line-height: 1.8;
+}
+
+.compatibility-table-wrapper {
+  overflow-x: auto;
+  margin-bottom: 3rem;
+  padding: 0 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.compatibility-table {
+  width: 100%;
+  max-width: 950px;
+  margin: 0 auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(231, 76, 60, 0.15), 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.compatibility-table thead {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+}
+
+.compatibility-table th {
+  padding: 1.4rem 1.2rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.compatibility-table th:first-child {
+  text-align: center;
+  border-radius: 20px 0 0 0;
+}
+
+.compatibility-table th:last-child {
+  border-radius: 0 20px 0 0;
+}
+
+.compatibility-table th i {
+  margin-right: 10px;
+  opacity: 0.9;
+}
+
+.compatibility-table td {
+  padding: 1.2rem 1rem;
+  border-bottom: 1px solid #f5f5f5;
+  vertical-align: middle;
+  transition: all 0.3s ease;
+}
+
+.compatibility-table tbody tr {
+  transition: all 0.3s ease;
+}
+
+.compatibility-table tbody tr:hover {
+  background: linear-gradient(90deg, #fff9f9, #ffffff);
+  transform: scale(1.01);
+}
+
+.compatibility-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.compatibility-table tbody tr:nth-child(even):hover {
+  background: linear-gradient(90deg, #fff5f5, #fafafa);
+}
+
+.compatibility-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.compatibility-table tbody tr:last-child td:first-child {
+  border-radius: 0 0 0 20px;
+}
+
+.compatibility-table tbody tr:last-child td:last-child {
+  border-radius: 0 0 20px 0;
+}
+
+.blood-type {
+  text-align: center;
+  width: 120px;
+}
+
+.blood-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-width: 65px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  letter-spacing: 1px;
+}
+
+.blood-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+}
+
+.blood-badge.o-neg { 
+  background: linear-gradient(135deg, #ff6b6b, #e74c3c); 
+  color: white; 
+}
+.blood-badge.o-pos { 
+  background: linear-gradient(135deg, #e74c3c, #c0392b); 
+  color: white; 
+}
+.blood-badge.a-neg { 
+  background: linear-gradient(135deg, #74b9ff, #3498db); 
+  color: white; 
+}
+.blood-badge.a-pos { 
+  background: linear-gradient(135deg, #3498db, #2980b9); 
+  color: white; 
+}
+.blood-badge.b-neg { 
+  background: linear-gradient(135deg, #55efc4, #27ae60); 
+  color: white; 
+}
+.blood-badge.b-pos { 
+  background: linear-gradient(135deg, #27ae60, #1e8449); 
+  color: white; 
+}
+.blood-badge.ab-neg { 
+  background: linear-gradient(135deg, #a29bfe, #9b59b6); 
+  color: white; 
+}
+.blood-badge.ab-pos { 
+  background: linear-gradient(135deg, #9b59b6, #8e44ad); 
+  color: white; 
+}
+
+.donate-to, .receive-from {
+  color: #444;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 25px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  animation: glow 2s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(255,255,255,0.5); }
+  50% { box-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.4); }
+}
+
+.tag.universal-donor {
+  background: linear-gradient(135deg, #f1c40f, #f39c12, #e67e22);
+  color: white;
+  box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+}
+
+.tag.universal-recipient {
+  background: linear-gradient(135deg, #be2edd, #9b59b6, #8e44ad);
+  color: white;
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.4);
+}
+
+/* Tip Cards */
+.compatibility-tips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.tip-card {
+  background: white;
+  padding: 2rem 1.5rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  text-align: center;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+}
+
+.tip-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #e74c3c, #f39c12);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+
+.tip-card:hover::before {
+  transform: scaleX(1);
+}
+
+.tip-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 20px 50px rgba(231, 76, 60, 0.15);
+}
+
+.tip-card i {
+  font-size: 3rem;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1.2rem;
+  display: inline-block;
+}
+
+.tip-card h4 {
+  color: #2c3e50;
+  margin-bottom: 0.8rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.tip-card p {
+  color: #6c7a89;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+/* Responsive Design for Compatibility Section */
+@media (max-width: 768px) {
+  .compatibility-section {
+    padding: 3rem 0;
+  }
+  
+  .compatibility-section h2 {
+    font-size: 1.8rem;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .compatibility-table th,
+  .compatibility-table td {
+    padding: 0.8rem 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .blood-badge {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .tag {
+    display: block;
+    margin: 8px 0 0 0;
+    font-size: 0.65rem;
+  }
+  
+  .compatibility-tips {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .compatibility-intro {
+    font-size: 1rem;
+    padding: 0 1rem;
+  }
+  
+  .tip-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .tip-card i {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .compatibility-section h2 {
+    font-size: 1.5rem;
+  }
+  
+  .compatibility-table th {
+    font-size: 0.75rem;
+    padding: 0.8rem 0.4rem;
+  }
+  
+  .compatibility-table td {
+    padding: 0.7rem 0.4rem;
+    font-size: 0.8rem;
+  }
+  
+  .blood-badge {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    min-width: 45px;
+  }
+  
+  .donate-to, .receive-from {
+    font-size: 0.8rem;
+  }
 }
 
 /* Responsive Design */
@@ -981,5 +1377,1346 @@ footer {
     to {
         opacity: 1;
         transform: translateX(0);
+  }
+}
+
+/* ==================== Blood Bank Login Page ==================== */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-container {
+  display: flex;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  max-width: 900px;
+  width: 100%;
+}
+
+.login-box {
+  flex: 1;
+  padding: 3rem;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-header i {
+  font-size: 4rem;
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.login-header h1 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.login-header p {
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+.login-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.login-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.login-form label i {
+  margin-right: 8px;
+  color: #e74c3c;
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  padding-right: 45px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #7f8c8d;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.toggle-password:hover {
+  color: #e74c3c;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  background: #fee;
+  color: #c0392b;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 1rem;
+  text-align: center;
+  border: 1px solid #f5c6cb;
+}
+
+.login-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.login-footer a {
+  color: #7f8c8d;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.3s;
+}
+
+.login-footer a:hover {
+  color: #e74c3c;
+}
+
+.login-info {
+  flex: 1;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.login-info h2 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-info ul {
+  list-style: none;
+}
+
+.login-info li {
+  padding: 0.8rem 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1rem;
+  opacity: 0.95;
+}
+
+.login-info li i {
+  color: #2ecc71;
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+  }
+  
+  .login-info {
+    display: none;
+  }
+  
+  .login-box {
+    padding: 2rem;
+  }
+}
+
+/* ==================== Blood Bank Dashboard ==================== */
+.dashboard-page {
+  display: flex;
+  min-height: 100vh;
+  background: #f0f2f5;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #2c3e50, #1a252f);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+}
+
+.sidebar.collapsed {
+  transform: translateX(-260px);
+}
+
+.sidebar-header {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-header i {
+  font-size: 2rem;
+  color: #e74c3c;
+}
+
+.sidebar-header h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 1rem 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1rem 1.5rem;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: white;
+}
+
+.nav-item.active {
+  background: rgba(231, 76, 60, 0.2);
+  color: white;
+  border-left-color: #e74c3c;
+}
+
+.nav-item i {
+  width: 20px;
+  text-align: center;
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-footer a {
+  display: block;
+  padding: 0.8rem 1rem;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.sidebar-footer a:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1rem;
+  transition: all 0.3s;
+  margin-top: 0.5rem;
+}
+
+.logout-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* Dashboard Main */
+.dashboard-main {
+  flex: 1;
+  margin-left: 260px;
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar.collapsed + .dashboard-main {
+  margin-left: 0;
+}
+
+.dashboard-header {
+  background: white;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #2c3e50;
+}
+
+.dashboard-header h1 {
+  flex: 1;
+  font-size: 1.5rem;
+  color: #2c3e50;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #7f8c8d;
+}
+
+.user-info i {
+  font-size: 2rem;
+  color: #e74c3c;
+}
+
+/* Dashboard Sections */
+.dashboard-section {
+  display: none;
+  padding: 2rem;
+}
+
+.dashboard-section.active {
+  display: block;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.stat-icon.red { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.stat-icon.green { background: linear-gradient(135deg, #27ae60, #1e8449); }
+.stat-icon.orange { background: linear-gradient(135deg, #f39c12, #d68910); }
+.stat-icon.purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+
+.stat-info h3 {
+  font-size: 1.8rem;
+  color: #2c3e50;
+  line-height: 1;
+}
+
+.stat-info p {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+}
+
+/* Dashboard Cards */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.dashboard-card h3 {
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-card h3 i {
+  color: #e74c3c;
+}
+
+/* Blood Group Chart */
+.blood-group-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.chart-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bar-label {
+  width: 40px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.bar-track {
+  flex: 1;
+  height: 24px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.bar-fill.red { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+.bar-fill.blue { background: linear-gradient(90deg, #3498db, #2980b9); }
+.bar-fill.green { background: linear-gradient(90deg, #27ae60, #1e8449); }
+.bar-fill.purple { background: linear-gradient(90deg, #9b59b6, #8e44ad); }
+
+.bar-value {
+  width: 40px;
+  text-align: right;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Alerts */
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.alert-item {
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+}
+
+.alert-item.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.alert-item.warning {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.alert-item.danger {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Section Header */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.section-header h2 {
+  color: #2c3e50;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-controls select,
+.filter-controls input {
+  padding: 10px 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+/* Data Table */
+.table-container {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #f8f9fa;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #2c3e50;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #555;
+}
+
+.data-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.blood-badge-sm {
+  display: inline-block;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.success { background: #e8f5e9; color: #2e7d32; }
+.status-badge.warning { background: #fff3e0; color: #ef6c00; }
+.status-badge.danger { background: #ffebee; color: #c62828; }
+.status-badge.info { background: #e3f2fd; color: #1565c0; }
+
+.expiring {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #7f8c8d;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.btn-icon:hover {
+  background: #f0f0f0;
+  color: #2c3e50;
+}
+
+.btn-icon.danger:hover {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Form Container */
+.form-container {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  max-width: 700px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.form-container h2 {
+  color: #2c3e50;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-container h2 i {
+  color: #e74c3c;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Reports Grid */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.report-card {
+  background: white;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  border: 2px solid transparent;
+}
+
+.report-card:hover {
+  transform: translateY(-5px);
+  border-color: #e74c3c;
+  box-shadow: 0 10px 30px rgba(231, 76, 60, 0.15);
+}
+
+.report-card i {
+  font-size: 3rem;
+  color: #e74c3c;
+  margin-bottom: 1rem;
+}
+
+.report-card h3 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.report-card p {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+/* Responsive Dashboard */
+@media (max-width: 992px) {
+  .sidebar {
+    transform: translateX(-260px);
+  }
+  
+  .sidebar.collapsed {
+    transform: translateX(0);
+  }
+  
+  .dashboard-main {
+    margin-left: 0;
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .data-table {
+    font-size: 0.85rem;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 0.8rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .filter-controls select,
+  .filter-controls input {
+    width: 100%;
+  }
+}
+
+/* ==================== Request Details Modal ==================== */
+.modal-lg {
+  max-width: 700px;
+}
+
+.request-details {
+  margin-bottom: 1.5rem;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.blood-badge-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 30px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-radius: 15px;
+  font-weight: 700;
+  font-size: 1.8rem;
+  box-shadow: 0 5px 20px rgba(231, 76, 60, 0.3);
+}
+
+.detail-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.detail-section {
+  background: #f8f9fa;
+  padding: 1.2rem;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.detail-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-section h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-section h4 i {
+  color: #e74c3c;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  color: #2c3e50;
+  font-weight: 500;
+  text-align: right;
+}
+
+.detail-value code {
+  background: #e9ecef;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.contact-link {
+  color: #3498db;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.3s;
+}
+
+.contact-link:hover {
+  color: #e74c3c;
+}
+
+.contact-link i {
+  font-size: 0.85rem;
+}
+
+.detail-notes {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #555;
+  line-height: 1.6;
+  border-left: 4px solid #e74c3c;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #f0f0f0;
+  flex-wrap: wrap;
+}
+
+.modal-actions .btn {
+  flex: 1;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.phone-link {
+  color: #27ae60;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.phone-link:hover {
+  color: #1e8449;
+}
+
+.phone-link i {
+  font-size: 0.8rem;
+}
+
+/* Table row hover for clickable rows */
+.data-table tbody tr[onclick] {
+  transition: background 0.2s ease;
+}
+
+.data-table tbody tr[onclick]:hover {
+  background: #e3f2fd !important;
+}
+
+@media (max-width: 600px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
+}
+
+/* ==================== Blood Bank Search Feature ==================== */
+.btn-search {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+  color: white;
+  box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+.btn-search:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+}
+
+/* Ensure Blood Bank Search Modals Display Properly */
+#searchBloodBankModal,
+#bloodBankResultsModal {
+  z-index: 9999 !important;
+}
+
+#searchBloodBankModal.modal,
+#bloodBankResultsModal.modal {
+  display: none;
+}
+
+.search-bb-container {
+  padding: 1rem 0;
+}
+
+.search-step {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 15px;
+  border: 2px solid #e9ecef;
+}
+
+.search-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+
+.location-options {
+  text-align: center;
+}
+
+.location-options .btn {
+  margin-bottom: 1rem;
+}
+
+.divider-text {
+  color: #7f8c8d;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.location-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1rem;
+  background: #e8f5e9;
+  border-radius: 10px;
+  margin-top: 1rem;
+  color: #2e7d32;
+}
+
+.location-status i {
+  font-size: 1.5rem;
+  color: #27ae60;
+}
+
+.radius-options {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.radius-btn {
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.radius-btn:hover {
+  border-color: #e74c3c;
+  color: #e74c3c;
+}
+
+.radius-btn.active {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-color: #e74c3c;
+}
+
+.custom-radius {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.custom-radius label {
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+.custom-radius input {
+  width: 100px;
+  padding: 10px 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.btn-search-bb {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+}
+
+/* Blood Bank Results Modal */
+.modal-fullscreen {
+  max-width: 95%;
+  width: 1200px;
+  height: 90vh;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  margin: 2vh auto;
+}
+
+#bloodBankResultsModal {
+  z-index: 9999 !important;
+}
+
+#bloodBankResultsModal[style*="display: block"],
+#bloodBankResultsModal[style*="display:block"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+#bloodBankResultsModal .modal-content {
+  height: 90vh;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.bb-results-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 1.5rem;
+  overflow: hidden;
+  margin-top: 1rem;
+  min-height: 0;
+  height: calc(90vh - 120px);
+}
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  background: #e0e0e0;
+}
+
+.bb-results-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 1rem;
+}
+
+.results-header span {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border-radius: 20px;
+}
+
+.bb-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  min-height: 200px;
+}
+
+.bb-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bb-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.bb-list::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 3px;
+}
+
+.bb-list::-webkit-scrollbar-thumb:hover {
+  background: #a0a0a0;
+}
+
+.bb-card {
+  background: white;
+  border: 2px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bb-card:hover {
+  border-color: #e74c3c;
+  box-shadow: 0 5px 20px rgba(231, 76, 60, 0.15);
+  transform: translateY(-2px);
+}
+
+.bb-card-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.bb-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.bb-info {
+  flex: 1;
+}
+
+.bb-info h4 {
+  color: #2c3e50;
+  margin-bottom: 0.3rem;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.bb-address {
+  color: #7f8c8d;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.bb-address i {
+  color: #e74c3c;
+  margin-top: 2px;
+}
+
+.bb-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.8rem;
+}
+
+.bb-distance {
+  color: #3498db;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bb-rating {
+  color: #f39c12;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bb-status {
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.bb-status.open {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.bb-status.closed {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.bb-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bb-actions .btn {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: #7f8c8d;
+}
+
+.no-results i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.3;
+}
+
+.no-results p {
+  margin: 0.5rem 0;
+}
+
+/* Responsive Blood Bank Search */
+@media (max-width: 992px) {
+  .bb-results-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: 350px 1fr;
+    height: auto;
+    max-height: calc(90vh - 100px);
+  }
+  
+  .modal-fullscreen {
+    height: 95vh;
+    max-height: 95vh;
+  }
+  
+  .bb-results-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .radius-options {
+    gap: 0.5rem;
+  }
+  
+  .radius-btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+  
+  .bb-results-container {
+    grid-template-rows: 250px 1fr;
+  }
+  
+  .bb-card-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .bb-index {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+  
+  .bb-actions {
+    flex-direction: column;
   }
 }
