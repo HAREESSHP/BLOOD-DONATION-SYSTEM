@@ -120,13 +120,13 @@ async function initDefaultAdmin() {
   const adminExists = await BloodBankUserModel.findOne({ role: 'admin' });
   if (!adminExists) {
     await BloodBankUserModel.create({
-      username: 'admin',
-      password: hashPassword('admin123'),
+      username: 'Pavan',
+      password: hashPassword('Pavan123'),
       name: 'Administrator',
       role: 'admin',
       bloodBankName: 'Central Blood Bank'
     });
-    console.log('Default admin created: username=admin, password=admin123');
+    console.log('Default admin created: username=Pavan, password=Pavan123');
   }
 }
 initDefaultAdmin();
