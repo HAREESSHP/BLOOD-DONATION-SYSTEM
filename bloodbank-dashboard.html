@@ -349,6 +349,15 @@
 
         const user = JSON.parse(localStorage.getItem('bloodBankUser') || '{}');
         document.getElementById('welcomeUser').textContent = `Welcome, ${user.name || 'Admin'}`;
+        
+        // Show blood bank name in sidebar header if available
+        if (user.bloodBankName) {
+            const sidebarHeader = document.querySelector('.sidebar-header h2');
+            if (sidebarHeader) {
+                sidebarHeader.textContent = user.bloodBankName;
+                sidebarHeader.title = user.bloodBankName; // Show full name on hover
+            }
+        }
 
         // API helper with auth
         async function apiCall(endpoint, options = {}) {

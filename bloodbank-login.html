@@ -51,6 +51,13 @@
                 <a href="index.html"><i class="fas fa-arrow-left"></i> Back to Home</a>
                 <a href="#" onclick="showForgotPassword()">Forgot Password?</a>
             </div>
+            
+            <div class="register-prompt" style="margin-top: 1.5rem; text-align: center; padding-top: 1rem; border-top: 1px solid #eee;">
+                <p style="color: #666; margin-bottom: 0.5rem;">New Blood Bank?</p>
+                <button type="button" onclick="showRegisterModal()" class="btn btn-secondary" style="width: 100%;">
+                    <i class="fas fa-hospital-user"></i> Register Your Blood Bank
+                </button>
+            </div>
         </div>
         
         <div class="login-info">
@@ -61,6 +68,88 @@
                 <li><i class="fas fa-check"></i> Generate reports</li>
                 <li><i class="fas fa-check"></i> Monitor expiry dates</li>
             </ul>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div id="registerModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h2><i class="fas fa-hospital-user"></i> Register New Blood Bank</h2>
+                <button class="close-btn" onclick="closeRegisterModal()">&times;</button>
+            </div>
+            <form id="registerForm" class="modal-body">
+                <h3 style="margin-bottom: 1rem; color: #e74c3c;"><i class="fas fa-hospital"></i> Blood Bank Details</h3>
+                
+                <div class="form-group">
+                    <label for="regBankName"><i class="fas fa-hospital-symbol"></i> Blood Bank Name *</label>
+                    <input type="text" id="regBankName" placeholder="e.g., City Central Blood Bank" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regAddress"><i class="fas fa-map-marker-alt"></i> Full Address *</label>
+                    <input type="text" id="regAddress" placeholder="Street, City, State, PIN Code" required>
+                </div>
+                
+                <div class="form-row" style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="regLatitude"><i class="fas fa-globe"></i> Latitude *</label>
+                        <input type="number" step="any" id="regLatitude" placeholder="e.g., 17.3850" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="regLongitude"><i class="fas fa-globe"></i> Longitude *</label>
+                        <input type="number" step="any" id="regLongitude" placeholder="e.g., 78.4867" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <button type="button" onclick="getCurrentLocationForRegister()" class="btn btn-secondary" style="width: 100%;">
+                        <i class="fas fa-crosshairs"></i> Use My Current Location
+                    </button>
+                    <small style="color: #666; display: block; margin-top: 0.5rem;">Or enter coordinates manually</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regContact"><i class="fas fa-phone"></i> Contact Number *</label>
+                    <input type="tel" id="regContact" placeholder="+91-XX-XXXXXXXX" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regEmail"><i class="fas fa-envelope"></i> Email</label>
+                    <input type="email" id="regEmail" placeholder="bloodbank@example.com">
+                </div>
+                
+                <hr style="margin: 1.5rem 0; border-color: #eee;">
+                
+                <h3 style="margin-bottom: 1rem; color: #3498db;"><i class="fas fa-user-shield"></i> Admin Account</h3>
+                
+                <div class="form-group">
+                    <label for="regAdminName"><i class="fas fa-user"></i> Admin Name</label>
+                    <input type="text" id="regAdminName" placeholder="Your full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="regUsername"><i class="fas fa-user-tag"></i> Username *</label>
+                    <input type="text" id="regUsername" placeholder="Choose a username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="regPassword"><i class="fas fa-lock"></i> Password *</label>
+                    <input type="password" id="regPassword" placeholder="Min 6 characters" required minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="regConfirmPassword"><i class="fas fa-lock"></i> Confirm Password *</label>
+                    <input type="password" id="regConfirmPassword" placeholder="Confirm your password" required>
+                </div>
+                
+                <div id="registerError" class="error-message" style="display: none;"></div>
+                <div id="registerSuccess" class="success-message" style="display: none; background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;"></div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    <i class="fas fa-check-circle"></i> Register Blood Bank
+                </button>
+            </form>
         </div>
     </div>
 
@@ -87,6 +176,141 @@
         function showForgotPassword() {
             alert('Please contact the system administrator to reset your password.');
         }
+
+        // Registration Modal Functions
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('registerForm').reset();
+            document.getElementById('registerError').style.display = 'none';
+            document.getElementById('registerSuccess').style.display = 'none';
+        }
+
+        function closeRegisterModal() {
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        // Get current location for registration
+        function getCurrentLocationForRegister() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting Location...';
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    document.getElementById('regLatitude').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('regLongitude').value = position.coords.longitude.toFixed(6);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Location Captured!';
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-crosshairs"></i> Use My Current Location';
+                    }, 2000);
+                    
+                    // Try to get address using Nominatim
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.display_name && !document.getElementById('regAddress').value) {
+                                document.getElementById('regAddress').value = data.display_name;
+                            }
+                        })
+                        .catch(() => {});
+                },
+                (error) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-crosshairs"></i> Use My Current Location';
+                    let message = 'Unable to get location';
+                    if (error.code === 1) message = 'Location access denied. Please enable location permissions.';
+                    else if (error.code === 2) message = 'Location unavailable';
+                    else if (error.code === 3) message = 'Location request timed out';
+                    alert(message);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        // Handle registration form submit
+        document.getElementById('registerForm').onsubmit = async function(e) {
+            e.preventDefault();
+            
+            const errorDiv = document.getElementById('registerError');
+            const successDiv = document.getElementById('registerSuccess');
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+            
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                errorDiv.textContent = 'Passwords do not match';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            const payload = {
+                bankName: document.getElementById('regBankName').value.trim(),
+                address: document.getElementById('regAddress').value.trim(),
+                latitude: parseFloat(document.getElementById('regLatitude').value),
+                longitude: parseFloat(document.getElementById('regLongitude').value),
+                contactNumber: document.getElementById('regContact').value.trim(),
+                email: document.getElementById('regEmail').value.trim(),
+                adminName: document.getElementById('regAdminName').value.trim(),
+                username: document.getElementById('regUsername').value.trim(),
+                password: password
+            };
+            
+            try {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+                
+                const res = await fetch('/api/bloodbank/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Register Blood Bank';
+                
+                if (res.ok && data.token) {
+                    successDiv.innerHTML = `
+                        <strong><i class="fas fa-check-circle"></i> Registration Successful!</strong><br>
+                        Blood Bank "${data.bloodBank.name}" has been registered.<br>
+                        Redirecting to dashboard...
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    // Store token and redirect
+                    localStorage.setItem('bloodBankToken', data.token);
+                    localStorage.setItem('bloodBankUser', JSON.stringify(data.user));
+                    
+                    setTimeout(() => {
+                        window.location.href = 'bloodbank-dashboard.html';
+                    }, 2000);
+                } else {
+                    errorDiv.textContent = data.message || 'Registration failed. Please try again.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+                errorDiv.style.display = 'block';
+            }
+        };
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('registerModal');
+            if (event.target === modal) {
+                closeRegisterModal();
+            }
+        };
 
         document.getElementById('loginForm').onsubmit = async function(e) {
             e.preventDefault();

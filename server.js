@@ -50,10 +50,12 @@ const bloodBankUserSchema = new mongoose.Schema({
   name: String,
   role: { type: String, enum: ['admin', 'staff'], default: 'staff' },
   bloodBankName: String,
+  bloodBankId: { type: mongoose.Schema.Types.ObjectId, ref: 'BloodBank' }, // Link to specific blood bank
   createdAt: { type: Date, default: Date.now },
   lastLogin: Date,
   isActive: { type: Boolean, default: true }
 });
+bloodBankUserSchema.index({ bloodBankId: 1 });
 const BloodBankUserModel = mongoose.model('BloodBankUser', bloodBankUserSchema);
 
 // Blood Inventory Schema
@@ -67,11 +69,13 @@ const bloodInventorySchema = new mongoose.Schema({
   donorRef: String, // Reference to donor if available
   notes: String,
   addedBy: String, // Username who added
+  bloodBankId: { type: mongoose.Schema.Types.ObjectId, ref: 'BloodBank' }, // Link to specific blood bank
   addedAt: { type: Date, default: Date.now },
   updatedAt: Date
 });
 bloodInventorySchema.index({ bloodGroup: 1, status: 1 });
 bloodInventorySchema.index({ expiryDate: 1 });
+bloodInventorySchema.index({ bloodBankId: 1 });
 const BloodInventoryModel = mongoose.model('BloodInventory', bloodInventorySchema);
 
 // Helper: Generate simple token
@@ -80,6 +84,7 @@ function generateToken(user) {
     id: user._id,
     username: user.username,
     role: user.role,
+    bloodBankId: user.bloodBankId,
     exp: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
   };
   const data = JSON.stringify(payload);
@@ -324,12 +329,111 @@ app.post('/api/bloodbank/login', async (req, res) => {
         username: user.username,
         name: user.name,
         role: user.role,
-        bloodBankName: user.bloodBankName
+        bloodBankName: user.bloodBankName,
+        bloodBankId: user.bloodBankId
       }
     });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Register new blood bank with user account (public registration)
+app.post('/api/bloodbank/register', async (req, res) => {
+  try {
+    const { 
+      // Blood bank details
+      bankName, 
+      address, 
+      latitude, 
+      longitude, 
+      contactNumber, 
+      email,
+      // User credentials
+      username, 
+      password, 
+      adminName 
+    } = req.body;
+    
+    // Validate required fields
+    if (!bankName || !address || latitude === undefined || longitude === undefined || !contactNumber) {
+      return res.status(400).json({ message: 'Blood bank name, address, coordinates, and contact number are required' });
+    }
+    
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    
+    // Check if username already exists
+    const existingUser = await BloodBankUserModel.findOne({ username });
+    if (existingUser) {
+      return res.status(409).json({ message: 'Username already exists. Please choose a different username.' });
+    }
+    
+    // Check if blood bank with same name already exists
+    const existingBank = await BloodBankModel.findOne({ name: bankName });
+    if (existingBank) {
+      return res.status(409).json({ message: 'A blood bank with this name already exists.' });
+    }
+    
+    // Create the blood bank
+    const bloodBank = await BloodBankModel.create({
+      name: bankName,
+      address,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      contactNumber,
+      email: email || '',
+      bloodInventory: {
+        'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0,
+        'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0
+      },
+      isActive: true
+    });
+    
+    // Create the admin user for this blood bank
+    const newUser = await BloodBankUserModel.create({
+      username,
+      password: hashPassword(password),
+      name: adminName || username,
+      role: 'admin',
+      bloodBankName: bankName,
+      bloodBankId: bloodBank._id,
+      isActive: true
+    });
+    
+    console.log('New blood bank registered:', bankName, 'by user:', username);
+    
+    // Auto-login after registration
+    const token = generateToken(newUser);
+    
+    res.json({
+      message: 'Blood bank registered successfully',
+      token,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role,
+        bloodBankName: newUser.bloodBankName,
+        bloodBankId: bloodBank._id
+      },
+      bloodBank: {
+        id: bloodBank._id,
+        name: bloodBank.name,
+        address: bloodBank.address,
+        latitude: bloodBank.latitude,
+        longitude: bloodBank.longitude
+      }
+    });
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ message: 'Error registering blood bank: ' + err.message });
   }
 });
 
@@ -369,13 +473,16 @@ app.get('/api/bloodbank/inventory/stats', authMiddleware, async (req, res) => {
     const now = new Date();
     const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     
+    // Build filter based on user's blood bank (admin sees all, staff sees their bank only)
+    const bankFilter = req.user.bloodBankId ? { bloodBankId: req.user.bloodBankId } : {};
+    
     // Update expired items
     await BloodInventoryModel.updateMany(
-      { expiryDate: { $lt: now }, status: 'available' },
+      { ...bankFilter, expiryDate: { $lt: now }, status: 'available' },
       { status: 'expired', updatedAt: now }
     );
     
-    const allInventory = await BloodInventoryModel.find({ status: { $in: ['available', 'reserved'] } });
+    const allInventory = await BloodInventoryModel.find({ ...bankFilter, status: { $in: ['available', 'reserved'] } });
     
     // Group by blood type
     const byBloodGroup = {};
@@ -393,6 +500,7 @@ app.get('/api/bloodbank/inventory/stats', authMiddleware, async (req, res) => {
     
     // Expiring soon
     const expiringSoon = await BloodInventoryModel.countDocuments({
+      ...bankFilter,
       status: 'available',
       expiryDate: { $gte: now, $lte: sevenDaysLater }
     });
@@ -414,6 +522,10 @@ app.get('/api/bloodbank/inventory/stats', authMiddleware, async (req, res) => {
 app.get('/api/bloodbank/inventory', authMiddleware, async (req, res) => {
   try {
     const filter = {};
+    // Filter by blood bank for non-admin users
+    if (req.user.bloodBankId) {
+      filter.bloodBankId = req.user.bloodBankId;
+    }
     if (req.query.bloodGroup) filter.bloodGroup = req.query.bloodGroup;
     if (req.query.status) filter.status = req.query.status;
     
@@ -458,8 +570,18 @@ app.post('/api/bloodbank/inventory', authMiddleware, async (req, res) => {
       donorRef,
       notes,
       addedBy: req.user.username,
+      bloodBankId: req.user.bloodBankId, // Link to user's blood bank
       status: 'available'
     });
+    
+    // Also update the blood bank's inventory count
+    if (req.user.bloodBankId) {
+      const bloodBank = await BloodBankModel.findById(req.user.bloodBankId);
+      if (bloodBank) {
+        bloodBank.bloodInventory[bloodGroup] = (bloodBank.bloodInventory[bloodGroup] || 0) + 1;
+        await bloodBank.save();
+      }
+    }
     
     res.json(item);
   } catch (err) {
