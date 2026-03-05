@@ -166,6 +166,8 @@ const bloodRequestSchema = new mongoose.Schema({
   bloodGroup: String,
   hospitalName: String,
   hospitalLocation: String,
+  patientLatitude: Number,
+  patientLongitude: Number,
   urgency: String,
   notes: String,
   requestedAt: Date,
@@ -173,6 +175,13 @@ const bloodRequestSchema = new mongoose.Schema({
   donorDetails: Object, // Will store matched donor info
   manageCode: String,
   resolvedAt: Date,
+  nearestBloodBanks: [{ // Store nearest blood banks for the request
+    bankId: mongoose.Schema.Types.ObjectId,
+    name: String,
+    address: String,
+    distance: Number,
+    availableUnits: Number
+  }]
 });
 // Prevent duplicates of pending requests for same phone+bloodGroup within 1 hour
 bloodRequestSchema.index(
@@ -189,6 +198,61 @@ const messageSchema = new mongoose.Schema({
   sentAt: { type: Date, default: Date.now },
 });
 const MessageModel = mongoose.model('Message', messageSchema);
+
+// Blood Bank Schema - Multi Blood Bank Support
+const bloodBankSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  address: { type: String, required: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  contactNumber: { type: String, required: true },
+  email: String,
+  operatingHours: {
+    open: { type: String, default: '08:00' },
+    close: { type: String, default: '20:00' }
+  },
+  bloodInventory: {
+    'A+': { type: Number, default: 0 },
+    'A-': { type: Number, default: 0 },
+    'B+': { type: Number, default: 0 },
+    'B-': { type: Number, default: 0 },
+    'O+': { type: Number, default: 0 },
+    'O-': { type: Number, default: 0 },
+    'AB+': { type: Number, default: 0 },
+    'AB-': { type: Number, default: 0 }
+  },
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: Date
+});
+bloodBankSchema.index({ latitude: 1, longitude: 1 });
+bloodBankSchema.index({ isActive: 1 });
+const BloodBankModel = mongoose.model('BloodBank', bloodBankSchema);
+
+// Haversine formula to calculate distance between two coordinates (in kilometers)
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
+}
+
+// Estimate travel time based on distance (assuming average speed of 30 km/h in city)
+function estimateTravelTime(distanceKm) {
+  const avgSpeedKmH = 30;
+  const timeHours = distanceKm / avgSpeedKmH;
+  const timeMinutes = Math.round(timeHours * 60);
+  if (timeMinutes < 60) {
+    return `${timeMinutes} min`;
+  }
+  const hours = Math.floor(timeMinutes / 60);
+  const mins = timeMinutes % 60;
+  return `${hours}h ${mins}min`;
+}
 
 // ==================== Blood Bank Authentication Routes ====================
 
@@ -528,6 +592,15 @@ app.post('/api/requests', async (req, res) => {
     if (!payload.requestedAt) {
       payload.requestedAt = new Date();
     }
+    
+    // Handle patient location
+    if (payload.patientLatitude !== undefined) {
+      payload.patientLatitude = parseFloat(payload.patientLatitude);
+    }
+    if (payload.patientLongitude !== undefined) {
+      payload.patientLongitude = parseFloat(payload.patientLongitude);
+    }
+    
     // Avoid duplicate pending requests for same phone+bloodGroup
     const exists = await BloodRequestModel.findOne({
       phone: payload.phone,
@@ -537,8 +610,40 @@ app.post('/api/requests', async (req, res) => {
     if (exists) {
       return res.status(409).send({ message: 'A pending request already exists for this phone and blood group' });
     }
+    
     // generate a simple management code for resolving/removing later
     payload.manageCode = (Math.floor(100000 + Math.random()*900000)).toString();
+    
+    // If patient location is provided, find nearest blood banks with available blood
+    let nearestBanks = [];
+    if (payload.patientLatitude && payload.patientLongitude && payload.bloodGroup) {
+      const allBloodBanks = await BloodBankModel.find({ isActive: true });
+      const availableBanks = allBloodBanks.filter(bank => {
+        const inventory = bank.bloodInventory[payload.bloodGroup] || 0;
+        return inventory > 0;
+      });
+      
+      const banksWithDistance = availableBanks.map(bank => {
+        const distance = calculateHaversineDistance(
+          payload.patientLatitude,
+          payload.patientLongitude,
+          bank.latitude,
+          bank.longitude
+        );
+        return {
+          bankId: bank._id,
+          name: bank.name,
+          address: bank.address,
+          distance: Math.round(distance * 100) / 100,
+          availableUnits: bank.bloodInventory[payload.bloodGroup]
+        };
+      });
+      
+      banksWithDistance.sort((a, b) => a.distance - b.distance);
+      nearestBanks = banksWithDistance.slice(0, 3);
+      payload.nearestBloodBanks = nearestBanks;
+    }
+    
     const bloodRequest = new BloodRequestModel(payload);
     await bloodRequest.save();
 
@@ -567,7 +672,11 @@ app.post('/api/requests', async (req, res) => {
     });
     await Promise.allSettled(notifications);
 
-    res.send({ ...bloodRequest.toObject(), notifiedDonors: donors.length });
+    res.send({ 
+      ...bloodRequest.toObject(), 
+      notifiedDonors: donors.length,
+      nearestBloodBanks: nearestBanks
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send({ message: 'Error creating blood request' });
@@ -738,6 +847,323 @@ app.get('/blood-request', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).send({ message: 'Error sending notification' });
+  }
+});
+
+// ==================== Blood Bank Management Routes ====================
+
+// Get all blood banks
+app.get('/api/bloodbanks', async (req, res) => {
+  try {
+    const bloodBanks = await BloodBankModel.find({ isActive: true });
+    res.json(bloodBanks);
+  } catch (err) {
+    console.error('Get blood banks error:', err);
+    res.status(500).json({ message: 'Error getting blood banks' });
+  }
+});
+
+// Get single blood bank
+app.get('/api/bloodbanks/:id', async (req, res) => {
+  try {
+    const bloodBank = await BloodBankModel.findById(req.params.id);
+    if (!bloodBank) return res.status(404).json({ message: 'Blood bank not found' });
+    res.json(bloodBank);
+  } catch (err) {
+    res.status(500).json({ message: 'Error getting blood bank' });
+  }
+});
+
+// Create new blood bank (admin only)
+app.post('/api/bloodbanks', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const { name, address, latitude, longitude, contactNumber, email, operatingHours, bloodInventory } = req.body;
+    
+    if (!name || !address || latitude === undefined || longitude === undefined || !contactNumber) {
+      return res.status(400).json({ message: 'Name, address, coordinates, and contact number are required' });
+    }
+    
+    const bloodBank = await BloodBankModel.create({
+      name,
+      address,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      contactNumber,
+      email,
+      operatingHours,
+      bloodInventory: bloodInventory || {}
+    });
+    
+    res.json(bloodBank);
+  } catch (err) {
+    console.error('Create blood bank error:', err);
+    res.status(500).json({ message: 'Error creating blood bank' });
+  }
+});
+
+// Update blood bank
+app.patch('/api/bloodbanks/:id', authMiddleware, async (req, res) => {
+  try {
+    const { name, address, latitude, longitude, contactNumber, email, operatingHours, bloodInventory, isActive } = req.body;
+    const update = { updatedAt: new Date() };
+    
+    if (name) update.name = name;
+    if (address) update.address = address;
+    if (latitude !== undefined) update.latitude = parseFloat(latitude);
+    if (longitude !== undefined) update.longitude = parseFloat(longitude);
+    if (contactNumber) update.contactNumber = contactNumber;
+    if (email !== undefined) update.email = email;
+    if (operatingHours) update.operatingHours = operatingHours;
+    if (bloodInventory) update.bloodInventory = bloodInventory;
+    if (isActive !== undefined) update.isActive = isActive;
+    
+    const bloodBank = await BloodBankModel.findByIdAndUpdate(
+      req.params.id,
+      update,
+      { new: true }
+    );
+    
+    if (!bloodBank) return res.status(404).json({ message: 'Blood bank not found' });
+    res.json(bloodBank);
+  } catch (err) {
+    console.error('Update blood bank error:', err);
+    res.status(500).json({ message: 'Error updating blood bank' });
+  }
+});
+
+// Update blood inventory for a specific blood bank
+app.patch('/api/bloodbanks/:id/inventory', authMiddleware, async (req, res) => {
+  try {
+    const { bloodGroup, quantity, operation } = req.body;
+    
+    if (!bloodGroup || !['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].includes(bloodGroup)) {
+      return res.status(400).json({ message: 'Valid blood group is required' });
+    }
+    
+    const bloodBank = await BloodBankModel.findById(req.params.id);
+    if (!bloodBank) return res.status(404).json({ message: 'Blood bank not found' });
+    
+    const currentQty = bloodBank.bloodInventory[bloodGroup] || 0;
+    let newQty;
+    
+    if (operation === 'set') {
+      newQty = parseInt(quantity) || 0;
+    } else if (operation === 'add') {
+      newQty = currentQty + (parseInt(quantity) || 0);
+    } else if (operation === 'subtract') {
+      newQty = Math.max(0, currentQty - (parseInt(quantity) || 0));
+    } else {
+      newQty = parseInt(quantity) || 0;
+    }
+    
+    bloodBank.bloodInventory[bloodGroup] = newQty;
+    bloodBank.updatedAt = new Date();
+    await bloodBank.save();
+    
+    res.json(bloodBank);
+  } catch (err) {
+    console.error('Update inventory error:', err);
+    res.status(500).json({ message: 'Error updating inventory' });
+  }
+});
+
+// Delete blood bank
+app.delete('/api/bloodbanks/:id', authMiddleware, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const bloodBank = await BloodBankModel.findByIdAndDelete(req.params.id);
+    if (!bloodBank) return res.status(404).json({ message: 'Blood bank not found' });
+    res.json({ message: 'Blood bank deleted' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting blood bank' });
+  }
+});
+
+// ==================== Blood Availability Search API ====================
+
+// Search for blood availability at nearby blood banks
+app.post('/api/search-blood', async (req, res) => {
+  try {
+    const { bloodGroup, latitude, longitude, maxDistance } = req.body;
+    
+    if (!bloodGroup) {
+      return res.status(400).json({ message: 'Blood group is required' });
+    }
+    
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ message: 'Patient location (latitude, longitude) is required' });
+    }
+    
+    const patientLat = parseFloat(latitude);
+    const patientLng = parseFloat(longitude);
+    const maxDistanceKm = parseFloat(maxDistance) || 50; // Default 50km radius
+    
+    // Get all active blood banks
+    const allBloodBanks = await BloodBankModel.find({ isActive: true });
+    
+    // Filter blood banks that have the required blood group available (inventory > 0)
+    const availableBanks = allBloodBanks.filter(bank => {
+      const inventory = bank.bloodInventory[bloodGroup] || 0;
+      return inventory > 0;
+    });
+    
+    // Calculate distance for each available blood bank
+    const banksWithDistance = availableBanks.map(bank => {
+      const distance = calculateHaversineDistance(
+        patientLat,
+        patientLng,
+        bank.latitude,
+        bank.longitude
+      );
+      return {
+        _id: bank._id,
+        name: bank.name,
+        address: bank.address,
+        latitude: bank.latitude,
+        longitude: bank.longitude,
+        contactNumber: bank.contactNumber,
+        email: bank.email,
+        operatingHours: bank.operatingHours,
+        bloodInventory: bank.bloodInventory,
+        availableUnits: bank.bloodInventory[bloodGroup],
+        distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
+        estimatedTime: estimateTravelTime(distance)
+      };
+    });
+    
+    // Filter by max distance
+    const nearbyBanks = banksWithDistance.filter(bank => bank.distance <= maxDistanceKm);
+    
+    // Sort by distance (nearest first)
+    nearbyBanks.sort((a, b) => a.distance - b.distance);
+    
+    // Return top 3 nearest blood banks
+    const top3Banks = nearbyBanks.slice(0, 3);
+    
+    res.json({
+      bloodGroup,
+      patientLocation: { latitude: patientLat, longitude: patientLng },
+      totalFound: nearbyBanks.length,
+      nearestBanks: top3Banks,
+      allNearbyBanks: nearbyBanks // Include all for map display
+    });
+  } catch (err) {
+    console.error('Search blood error:', err);
+    res.status(500).json({ message: 'Error searching for blood' });
+  }
+});
+
+// Get blood availability summary across all banks
+app.get('/api/blood-availability', async (req, res) => {
+  try {
+    const bloodBanks = await BloodBankModel.find({ isActive: true });
+    
+    // Aggregate inventory across all banks
+    const totalInventory = {
+      'A+': 0, 'A-': 0, 'B+': 0, 'B-': 0,
+      'O+': 0, 'O-': 0, 'AB+': 0, 'AB-': 0
+    };
+    
+    bloodBanks.forEach(bank => {
+      Object.keys(totalInventory).forEach(bg => {
+        totalInventory[bg] += (bank.bloodInventory[bg] || 0);
+      });
+    });
+    
+    res.json({
+      totalBanks: bloodBanks.length,
+      inventory: totalInventory
+    });
+  } catch (err) {
+    console.error('Get blood availability error:', err);
+    res.status(500).json({ message: 'Error getting blood availability' });
+  }
+});
+
+// Seed sample blood banks (for development)
+app.post('/api/bloodbanks/seed', async (req, res) => {
+  try {
+    const { force } = req.body || {};
+    
+    // If force=true, delete all existing and reseed
+    if (force) {
+      await BloodBankModel.collection.drop().catch(() => {}); // Drop collection (removes indices too)
+    } else {
+      const existingCount = await BloodBankModel.countDocuments();
+      if (existingCount > 0) {
+        return res.json({ message: 'Blood banks already exist', count: existingCount });
+      }
+    }
+    
+    const sampleBloodBanks = [
+      {
+        name: 'Central Blood Bank',
+        address: 'MG Road, Hyderabad, Telangana 500001',
+        latitude: 17.3850,
+        longitude: 78.4867,
+        contactNumber: '+91-40-23456789',
+        email: 'central@bloodbank.org',
+        bloodInventory: { 'A+': 25, 'A-': 8, 'B+': 30, 'B-': 5, 'O+': 40, 'O-': 10, 'AB+': 15, 'AB-': 3 }
+      },
+      {
+        name: 'City Hospital Blood Center',
+        address: 'Banjara Hills, Hyderabad, Telangana 500034',
+        latitude: 17.4156,
+        longitude: 78.4347,
+        contactNumber: '+91-40-98765432',
+        email: 'cityhospital@bloodbank.org',
+        bloodInventory: { 'A+': 20, 'A-': 5, 'B+': 18, 'B-': 3, 'O+': 35, 'O-': 7, 'AB+': 10, 'AB-': 2 }
+      },
+      {
+        name: 'Red Cross Blood Bank',
+        address: 'Secunderabad, Telangana 500003',
+        latitude: 17.4399,
+        longitude: 78.4983,
+        contactNumber: '+91-40-27890123',
+        email: 'redcross@bloodbank.org',
+        bloodInventory: { 'A+': 15, 'A-': 4, 'B+': 22, 'B-': 6, 'O+': 28, 'O-': 12, 'AB+': 8, 'AB-': 4 }
+      },
+      {
+        name: 'LifeLine Blood Bank',
+        address: 'Kukatpally, Hyderabad, Telangana 500072',
+        latitude: 17.4947,
+        longitude: 78.3996,
+        contactNumber: '+91-40-23456123',
+        email: 'lifeline@bloodbank.org',
+        bloodInventory: { 'A+': 30, 'A-': 10, 'B+': 25, 'B-': 8, 'O+': 45, 'O-': 15, 'AB+': 12, 'AB-': 5 }
+      },
+      {
+        name: 'Gandhi Hospital Blood Bank',
+        address: 'Musheerabad, Hyderabad, Telangana 500003',
+        latitude: 17.4062,
+        longitude: 78.4802,
+        contactNumber: '+91-40-27891234',
+        email: 'gandhi@bloodbank.org',
+        bloodInventory: { 'A+': 18, 'A-': 6, 'B+': 20, 'B-': 4, 'O+': 32, 'O-': 8, 'AB+': 10, 'AB-': 3 }
+      },
+      {
+        name: 'Apollo Blood Bank',
+        address: 'Jubilee Hills, Hyderabad, Telangana 500033',
+        latitude: 17.4320,
+        longitude: 78.4070,
+        contactNumber: '+91-40-23607070',
+        email: 'apollo@bloodbank.org',
+        bloodInventory: { 'A+': 35, 'A-': 12, 'B+': 28, 'B-': 7, 'O+': 50, 'O-': 18, 'AB+': 14, 'AB-': 6 }
+      }
+    ];
+    
+    await BloodBankModel.insertMany(sampleBloodBanks);
+    res.json({ message: 'Sample blood banks created', count: sampleBloodBanks.length });
+  } catch (err) {
+    console.error('Seed blood banks error:', err);
+    res.status(500).json({ message: 'Error seeding blood banks' });
   }
 });
 

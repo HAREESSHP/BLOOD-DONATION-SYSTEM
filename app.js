@@ -107,6 +107,11 @@ document.getElementById('donorForm').onsubmit = async function(e) {
 document.getElementById('receiverForm').onsubmit = async function(e) {
   e.preventDefault();
   setLoading(true);
+  
+  // Get patient coordinates if available
+  const patientLat = document.getElementById('patientLatitude')?.value;
+  const patientLng = document.getElementById('patientLongitude')?.value;
+  
   const reqData = {
     requesterName: this.receiverName.value,
     email: this.receiverEmail.value,
@@ -114,6 +119,8 @@ document.getElementById('receiverForm').onsubmit = async function(e) {
     phone: this.receiverPhone.value,
     hospitalName: this.hospitalName.value,
     hospitalLocation: this.hospitalLocation.value,
+    patientLatitude: patientLat ? parseFloat(patientLat) : undefined,
+    patientLongitude: patientLng ? parseFloat(patientLng) : undefined,
     urgency: this.urgency.value,
     notes: this.notes.value,
     requestedAt: new Date().toISOString(),
@@ -127,7 +134,14 @@ document.getElementById('receiverForm').onsubmit = async function(e) {
   setLoading(false);
   if (res.ok) {
     closeReceiverForm();
-    const codeMsg = data && data.manageCode ? `\n\nSave this 6-digit code: ${data.manageCode}. You'll need it to mark your request as received.` : '';
+    let codeMsg = data && data.manageCode ? `\n\nSave this 6-digit code: ${data.manageCode}. You'll need it to mark your request as received.` : '';
+    
+    // Show nearest blood banks if available
+    if (data.nearestBloodBanks && data.nearestBloodBanks.length > 0) {
+      const banksInfo = data.nearestBloodBanks.map((b, i) => `${i+1}. ${b.name} (${b.distance} km)`).join('\n');
+      codeMsg += `\n\nNearest blood banks with ${data.bloodGroup}:\n${banksInfo}`;
+    }
+    
     openSuccessModal('Request Submitted', `Your blood request has been submitted. We are notifying compatible donors now.${codeMsg}`);
     pollRequestStatus(data._id);
     loadStats();
@@ -330,16 +344,40 @@ function getCurrentLocation(context) {
   setLoading(true);
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      const coords = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      
       if (context === 'donor') {
         const input = document.getElementById('donorLocation');
         if (input) input.value = coords;
       } else if (context === 'receiver') {
         const input = document.getElementById('hospitalLocation');
         if (input) input.value = coords;
+        // Also set hidden latitude and longitude fields
+        const latInput = document.getElementById('patientLatitude');
+        const lngInput = document.getElementById('patientLongitude');
+        if (latInput) latInput.value = lat;
+        if (lngInput) lngInput.value = lng;
       }
       setLoading(false);
       showToast('Location added', 'success');
+      
+      // Try to get address using Nominatim
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.display_name) {
+            if (context === 'donor') {
+              const input = document.getElementById('donorLocation');
+              if (input) input.value = data.display_name;
+            } else if (context === 'receiver') {
+              const input = document.getElementById('hospitalLocation');
+              if (input) input.value = data.display_name;
+            }
+          }
+        })
+        .catch(() => {});
     },
     () => { setLoading(false); showToast('Unable to fetch location', 'error'); }
   );
@@ -359,29 +397,14 @@ function closeSuccessModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// ==================== Blood Bank Search Feature ====================
+// ==================== Blood Bank Search Feature (Leaflet.js + OpenStreetMap) ====================
 
 let userLocation = null;
 let searchRadius = 10; // Default 10km
-let map = null;
+let selectedBloodGroup = null;
+let leafletMap = null;
 let markers = [];
-let directionsService = null;
-let directionsRenderer = null;
-let placesService = null;
-let googleMapsLoaded = false;
-
-// Handle Google Maps API loading error
-window.gm_authFailure = function() {
-  console.error('Google Maps authentication failed');
-  googleMapsLoaded = false;
-};
-
-// Initialize Google Maps (called by API callback)
-function initMap() {
-  // Map will be initialized when needed
-  googleMapsLoaded = true;
-  console.log('Google Maps API loaded successfully');
-}
+let routingControl = null;
 
 // Show search blood bank modal
 function showSearchBloodBank() {
@@ -395,12 +418,21 @@ function showSearchBloodBank() {
   }
   // Reset state
   userLocation = null;
+  selectedBloodGroup = null;
   document.getElementById('locationStatus').style.display = 'none';
   document.getElementById('manualLocation').value = '';
+  document.querySelectorAll('.blood-group-btn').forEach(btn => btn.classList.remove('active'));
 }
 
 function closeSearchBloodBank() {
   document.getElementById('searchBloodBankModal').style.display = 'none';
+}
+
+// Select blood group for search
+function selectBloodGroup(group) {
+  selectedBloodGroup = group;
+  document.querySelectorAll('.blood-group-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.blood-group-btn[data-group="${group}"]`)?.classList.add('active');
 }
 
 // Use current GPS location
@@ -418,29 +450,21 @@ function useCurrentLocation() {
         lng: position.coords.longitude
       };
       
-      // Check if Google Maps is loaded for reverse geocoding
-      if (typeof google !== 'undefined' && googleMapsLoaded) {
-        // Reverse geocode to get address
-        const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ location: userLocation }, (results, status) => {
-          setLoading(false);
-          if (status === 'OK' && results[0]) {
-            document.getElementById('locationText').textContent = results[0].formatted_address;
-          } else {
-            document.getElementById('locationText').textContent = 
-              `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+      setLoading(false);
+      document.getElementById('locationText').textContent = 
+        `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+      document.getElementById('locationStatus').style.display = 'flex';
+      showToast('Location detected successfully!', 'success');
+      
+      // Use Nominatim for reverse geocoding (free, OpenStreetMap-based)
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLocation.lat}&lon=${userLocation.lng}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.display_name) {
+            document.getElementById('locationText').textContent = data.display_name;
           }
-          document.getElementById('locationStatus').style.display = 'flex';
-          showToast('Location detected successfully!', 'success');
-        });
-      } else {
-        // Google Maps not loaded, just show coordinates
-        setLoading(false);
-        document.getElementById('locationText').textContent = 
-          `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
-        document.getElementById('locationStatus').style.display = 'flex';
-        showToast('Location detected! (Address lookup unavailable)', 'success');
-      }
+        })
+        .catch(() => {});
     },
     (error) => {
       setLoading(false);
@@ -462,27 +486,42 @@ document.addEventListener('DOMContentLoaded', function() {
       const address = this.value.trim();
       if (!address) return;
       
-      if (typeof google === 'undefined' || !googleMapsLoaded) {
-        showToast('Google Maps is still loading. Please wait and try again.', 'error');
+      // Check if input is coordinates (lat, lng format)
+      const coordMatch = address.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (coordMatch) {
+        userLocation = {
+          lat: parseFloat(coordMatch[1]),
+          lng: parseFloat(coordMatch[2])
+        };
+        document.getElementById('locationText').textContent = 
+          `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+        document.getElementById('locationStatus').style.display = 'flex';
+        showToast('Location set from coordinates!', 'success');
         return;
       }
       
+      // Use Nominatim for geocoding (free, OpenStreetMap-based)
       setLoading(true);
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: address }, (results, status) => {
-        setLoading(false);
-        if (status === 'OK' && results[0]) {
-          userLocation = {
-            lat: results[0].geometry.location.lat(),
-            lng: results[0].geometry.location.lng()
-          };
-          document.getElementById('locationText').textContent = results[0].formatted_address;
-          document.getElementById('locationStatus').style.display = 'flex';
-          showToast('Location found!', 'success');
-        } else {
-          showToast('Could not find that location. Please try again.', 'error');
-        }
-      });
+      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`)
+        .then(res => res.json())
+        .then(data => {
+          setLoading(false);
+          if (data && data.length > 0) {
+            userLocation = {
+              lat: parseFloat(data[0].lat),
+              lng: parseFloat(data[0].lon)
+            };
+            document.getElementById('locationText').textContent = data[0].display_name;
+            document.getElementById('locationStatus').style.display = 'flex';
+            showToast('Location found!', 'success');
+          } else {
+            showToast('Could not find that location. Try entering coordinates (lat, lng).', 'error');
+          }
+        })
+        .catch(() => {
+          setLoading(false);
+          showToast('Error searching for location. Try entering coordinates.', 'error');
+        });
     });
   }
 });
@@ -492,17 +531,15 @@ function selectRadius(radius) {
   searchRadius = radius;
   document.querySelectorAll('.radius-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelector(`.radius-btn[data-radius="${radius}"]`)?.classList.add('active');
-  document.getElementById('customRadius').value = '';
 }
 
-// Search for blood banks
+// Search for blood banks using our backend API
 function searchBloodBanks() {
   console.log('searchBloodBanks called');
   
-  // Check for custom radius
-  const customRadius = document.getElementById('customRadius').value;
-  if (customRadius && parseInt(customRadius) > 0) {
-    searchRadius = parseInt(customRadius);
+  if (!selectedBloodGroup) {
+    showToast('Please select a blood group first', 'error');
+    return;
   }
   
   if (!userLocation) {
@@ -510,6 +547,7 @@ function searchBloodBanks() {
     return;
   }
   
+  console.log('Blood Group:', selectedBloodGroup);
   console.log('Location set:', userLocation);
   console.log('Search radius:', searchRadius);
   
@@ -526,208 +564,189 @@ function searchBloodBanks() {
   resultsModal.style.display = 'block';
   resultsModal.style.visibility = 'visible';
   resultsModal.style.opacity = '1';
-  console.log('Results modal display set to block');
+  
+  // Update header with blood group
+  document.getElementById('searchedBloodGroup').textContent = selectedBloodGroup;
   
   // Show loading state
   document.getElementById('bloodBanksList').innerHTML = `
     <div style="text-align: center; padding: 3rem;">
       <div class="loading" style="width: 40px; height: 40px; border-width: 4px; border-top-color: #e74c3c;"></div>
-      <p style="margin-top: 1rem; color: #7f8c8d;">Searching for blood banks...</p>
+      <p style="margin-top: 1rem; color: #7f8c8d;">Searching for blood banks with ${selectedBloodGroup} blood...</p>
     </div>
   `;
   document.getElementById('resultsCount').textContent = 'Searching...';
   
-  // Initialize map with a small delay to ensure modal is visible
-  setTimeout(() => {
-    initializeBloodBankMap();
-  }, 100);
+  // Call our backend API
+  fetch('/api/search-blood', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      bloodGroup: selectedBloodGroup,
+      latitude: userLocation.lat,
+      longitude: userLocation.lng,
+      maxDistance: searchRadius
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('Search results:', data);
+      if (data.allNearbyBanks && data.allNearbyBanks.length > 0) {
+        initializeLeafletMap(data.allNearbyBanks, data.nearestBanks);
+      } else {
+        document.getElementById('bloodBanksList').innerHTML = `
+          <div class="no-results">
+            <i class="fas fa-search"></i>
+            <p>No blood banks with ${selectedBloodGroup} blood found within ${searchRadius} km.</p>
+            <p>Try increasing the search radius or selecting a different blood group.</p>
+          </div>
+        `;
+        document.getElementById('resultsCount').textContent = '0 blood banks found';
+        initializeLeafletMap([], []);
+      }
+    })
+    .catch(err => {
+      console.error('Search error:', err);
+      document.getElementById('bloodBanksList').innerHTML = `
+        <div class="no-results">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Error searching for blood banks.</p>
+          <p>Please try again later.</p>
+        </div>
+      `;
+      document.getElementById('resultsCount').textContent = 'Error';
+    });
 }
 
-function initializeBloodBankMap() {
+// Initialize Leaflet map with OpenStreetMap
+function initializeLeafletMap(allBanks, nearestBanks) {
   const mapContainer = document.getElementById('bloodBankMap');
   
-  // Check if Google Maps is loaded
-  if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-    document.getElementById('bloodBanksList').innerHTML = `
-      <div class="no-results">
-        <i class="fas fa-exclamation-triangle"></i>
-        <p>Google Maps failed to load.</p>
-        <p>Please check your internet connection and try again.</p>
-      </div>
-    `;
-    document.getElementById('resultsCount').textContent = 'Error loading maps';
-    return;
+  // Clear existing map if any
+  if (leafletMap) {
+    leafletMap.remove();
+    leafletMap = null;
   }
   
-  // Create map centered on user location
-  map = new google.maps.Map(mapContainer, {
-    center: userLocation,
-    zoom: 13,
-    styles: [
-      { featureType: 'poi.medical', stylers: [{ visibility: 'on' }] },
-      { featureType: 'poi.business', stylers: [{ visibility: 'off' }] }
-    ]
-  });
-  
-  // Add user location marker
-  new google.maps.Marker({
-    position: userLocation,
-    map: map,
-    icon: {
-      path: google.maps.SymbolPath.CIRCLE,
-      scale: 12,
-      fillColor: '#4285F4',
-      fillOpacity: 1,
-      strokeColor: '#ffffff',
-      strokeWeight: 3
-    },
-    title: 'Your Location'
-  });
-  
-  // Draw radius circle
-  new google.maps.Circle({
-    map: map,
-    center: userLocation,
-    radius: searchRadius * 1000, // Convert km to meters
-    fillColor: '#e74c3c',
-    fillOpacity: 0.1,
-    strokeColor: '#e74c3c',
-    strokeOpacity: 0.5,
-    strokeWeight: 2
-  });
-  
-  // Initialize services
-  placesService = new google.maps.places.PlacesService(map);
-  directionsService = new google.maps.DirectionsService();
-  directionsRenderer = new google.maps.DirectionsRenderer({
-    map: map,
-    suppressMarkers: false,
-    polylineOptions: {
-      strokeColor: '#e74c3c',
-      strokeWeight: 5
-    }
-  });
-  
-  // Search for blood banks
-  searchNearbyBloodBanks();
-}
-
-function searchNearbyBloodBanks() {
-  const request = {
-    location: userLocation,
-    radius: searchRadius * 1000,
-    keyword: 'blood bank'
-  };
-  
-  // Clear previous markers
-  markers.forEach(marker => marker.setMap(null));
+  // Clear markers array
   markers = [];
   
-  placesService.nearbySearch(request, (results, status) => {
-    if (status === google.maps.places.PlacesServiceStatus.OK) {
-      displayBloodBankResults(results);
-    } else {
-      // Try alternative search with different keywords
-      const altRequest = {
-        location: userLocation,
-        radius: searchRadius * 1000,
-        keyword: 'blood donation center hospital blood'
-      };
-      
-      placesService.nearbySearch(altRequest, (altResults, altStatus) => {
-        if (altStatus === google.maps.places.PlacesServiceStatus.OK) {
-          displayBloodBankResults(altResults);
-        } else {
-          document.getElementById('bloodBanksList').innerHTML = `
-            <div class="no-results">
-              <i class="fas fa-search"></i>
-              <p>No blood banks found in this area.</p>
-              <p>Try increasing the search radius.</p>
-            </div>
-          `;
-          document.getElementById('resultsCount').textContent = '0 blood banks found';
-        }
-      });
-    }
-  });
-}
-
-function displayBloodBankResults(places) {
-  const listContainer = document.getElementById('bloodBanksList');
-  document.getElementById('resultsCount').textContent = `${places.length} blood banks found within ${searchRadius} km`;
+  // Create map centered on user location
+  leafletMap = L.map(mapContainer).setView([userLocation.lat, userLocation.lng], 13);
   
-  // Sort by distance
-  places.sort((a, b) => {
-    const distA = calculateDistance(userLocation, { lat: a.geometry.location.lat(), lng: a.geometry.location.lng() });
-    const distB = calculateDistance(userLocation, { lat: b.geometry.location.lat(), lng: b.geometry.location.lng() });
-    return distA - distB;
+  // Add OpenStreetMap tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(leafletMap);
+  
+  // Add user location marker (blue)
+  const userIcon = L.divIcon({
+    className: 'user-marker',
+    html: '<div style="background: #4285F4; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
   });
   
-  listContainer.innerHTML = places.map((place, index) => {
-    const distance = calculateDistance(userLocation, {
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng()
+  L.marker([userLocation.lat, userLocation.lng], { icon: userIcon })
+    .addTo(leafletMap)
+    .bindPopup('<strong>Your Location</strong>')
+    .openPopup();
+  
+  // Add radius circle
+  L.circle([userLocation.lat, userLocation.lng], {
+    radius: searchRadius * 1000,
+    color: '#e74c3c',
+    fillColor: '#e74c3c',
+    fillOpacity: 0.1,
+    weight: 2
+  }).addTo(leafletMap);
+  
+  // Display results count
+  document.getElementById('resultsCount').textContent = 
+    `${allBanks.length} blood bank${allBanks.length !== 1 ? 's' : ''} found within ${searchRadius} km`;
+  
+  // Add markers for blood banks
+  allBanks.forEach((bank, index) => {
+    const isNearest = nearestBanks.some(nb => nb._id === bank._id);
+    const markerColor = isNearest ? '#27ae60' : '#e74c3c'; // Green for top 3, red for others
+    
+    const bankIcon = L.divIcon({
+      className: 'bank-marker',
+      html: `<div style="background: ${markerColor}; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${index + 1}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
     });
     
-    const rating = place.rating ? `<span class="bb-rating"><i class="fas fa-star"></i> ${place.rating}</span>` : '';
-    const openNow = place.opening_hours?.open_now;
-    const openStatus = openNow !== undefined 
-      ? `<span class="bb-status ${openNow ? 'open' : 'closed'}">${openNow ? 'Open Now' : 'Closed'}</span>`
-      : '';
-    
-    // Add marker to map
-    const marker = new google.maps.Marker({
-      position: place.geometry.location,
-      map: map,
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-        scaledSize: new google.maps.Size(40, 40)
-      },
-      title: place.name,
-      label: {
-        text: String(index + 1),
-        color: 'white',
-        fontWeight: 'bold'
-      }
-    });
-    
-    // Info window
-    const infoWindow = new google.maps.InfoWindow({
-      content: `
-        <div style="padding: 10px; max-width: 200px;">
-          <h4 style="margin: 0 0 5px 0;">${place.name}</h4>
-          <p style="margin: 0; color: #666; font-size: 12px;">${place.vicinity}</p>
-          ${rating}
+    const marker = L.marker([bank.latitude, bank.longitude], { icon: bankIcon })
+      .addTo(leafletMap)
+      .bindPopup(`
+        <div style="min-width: 200px;">
+          <h4 style="margin: 0 0 5px 0;">${bank.name}</h4>
+          <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">${bank.address}</p>
+          <p style="margin: 0; font-weight: bold; color: ${markerColor};">
+            <i class="fas fa-tint"></i> ${bank.availableUnits} units of ${selectedBloodGroup}
+          </p>
+          <p style="margin: 5px 0 0 0; font-size: 12px;">
+            <i class="fas fa-route"></i> ${bank.distance} km • ${bank.estimatedTime}
+          </p>
         </div>
-      `
-    });
-    
-    marker.addListener('click', () => {
-      infoWindow.open(map, marker);
-    });
+      `);
     
     markers.push(marker);
+  });
+  
+  // Fit map bounds to show all markers
+  if (allBanks.length > 0) {
+    const bounds = L.latLngBounds([
+      [userLocation.lat, userLocation.lng],
+      ...allBanks.map(bank => [bank.latitude, bank.longitude])
+    ]);
+    leafletMap.fitBounds(bounds, { padding: [20, 20] });
+  }
+  
+  // Render blood bank list
+  renderBloodBankList(allBanks, nearestBanks);
+  
+  // Automatically show route to nearest bank
+  if (nearestBanks.length > 0) {
+    setTimeout(() => {
+      showRouteToBank(nearestBanks[0]);
+    }, 500);
+  }
+}
+
+// Render blood bank list
+function renderBloodBankList(allBanks, nearestBanks) {
+  const listContainer = document.getElementById('bloodBanksList');
+  
+  listContainer.innerHTML = allBanks.map((bank, index) => {
+    const isNearest = nearestBanks.some(nb => nb._id === bank._id);
+    const nearestLabel = isNearest ? '<span class="nearest-badge">Top 3 Nearest</span>' : '';
     
     return `
-      <div class="bb-card" onclick="showDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()}, '${place.name.replace(/'/g, "\\'")}')">
+      <div class="bb-card ${isNearest ? 'nearest' : ''}" onclick="showRouteToBank(${JSON.stringify(bank).replace(/"/g, '&quot;')})">
         <div class="bb-card-header">
-          <span class="bb-index">${index + 1}</span>
+          <span class="bb-index" style="background: ${isNearest ? '#27ae60' : '#e74c3c'}">${index + 1}</span>
           <div class="bb-info">
-            <h4>${place.name}</h4>
-            <p class="bb-address"><i class="fas fa-map-marker-alt"></i> ${place.vicinity}</p>
+            <h4>${bank.name} ${nearestLabel}</h4>
+            <p class="bb-address"><i class="fas fa-map-marker-alt"></i> ${bank.address}</p>
+          </div>
+        </div>
+        <div class="bb-card-body">
+          <div class="inventory-badge">
+            <i class="fas fa-tint"></i> ${bank.availableUnits} units of ${selectedBloodGroup}
           </div>
         </div>
         <div class="bb-card-footer">
-          <span class="bb-distance"><i class="fas fa-route"></i> ${distance.toFixed(1)} km</span>
-          ${rating}
-          ${openStatus}
+          <span class="bb-distance"><i class="fas fa-route"></i> ${bank.distance} km</span>
+          <span class="bb-time"><i class="fas fa-clock"></i> ${bank.estimatedTime}</span>
         </div>
         <div class="bb-actions">
-          <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showDirections(${place.geometry.location.lat()}, ${place.geometry.location.lng()}, '${place.name.replace(/'/g, "\\'")}')">
-            <i class="fas fa-directions"></i> Directions
+          <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); showRouteToBank(${JSON.stringify(bank).replace(/"/g, '&quot;')})">
+            <i class="fas fa-directions"></i> Show Route
           </button>
-          <a href="https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${place.geometry.location.lat()},${place.geometry.location.lng()}" target="_blank" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();">
-            <i class="fas fa-external-link-alt"></i> Open in Maps
+          <a href="tel:${bank.contactNumber}" class="btn btn-sm btn-secondary" onclick="event.stopPropagation();">
+            <i class="fas fa-phone"></i> Call
           </a>
         </div>
       </div>
@@ -735,7 +754,75 @@ function displayBloodBankResults(places) {
   }).join('');
 }
 
-// Calculate distance between two points (Haversine formula)
+// Show route to a specific blood bank using Leaflet Routing Machine
+function showRouteToBank(bank) {
+  if (!leafletMap || !userLocation) return;
+  
+  // Remove existing routing control
+  if (routingControl) {
+    leafletMap.removeControl(routingControl);
+  }
+  
+  // Create routing control
+  routingControl = L.Routing.control({
+    waypoints: [
+      L.latLng(userLocation.lat, userLocation.lng),
+      L.latLng(bank.latitude, bank.longitude)
+    ],
+    routeWhileDragging: false,
+    showAlternatives: false,
+    createMarker: function() { return null; }, // Don't create default markers
+    lineOptions: {
+      styles: [{ color: '#e74c3c', weight: 5, opacity: 0.8 }]
+    },
+    show: false // Don't show the itinerary panel
+  }).addTo(leafletMap);
+  
+  // Listen for route calculation
+  routingControl.on('routesfound', function(e) {
+    const route = e.routes[0];
+    const distance = (route.summary.totalDistance / 1000).toFixed(1);
+    const time = Math.round(route.summary.totalTime / 60);
+    
+    // Show route info panel
+    const routePanel = document.getElementById('routeInfoPanel');
+    routePanel.style.display = 'block';
+    document.getElementById('routeDetails').innerHTML = `
+      <p><strong>${bank.name}</strong></p>
+      <p><i class="fas fa-route"></i> Distance: ${distance} km</p>
+      <p><i class="fas fa-clock"></i> Travel Time: ${time} min</p>
+      <p><i class="fas fa-tint"></i> Available: ${bank.availableUnits} units of ${selectedBloodGroup}</p>
+      <p><i class="fas fa-phone"></i> <a href="tel:${bank.contactNumber}">${bank.contactNumber}</a></p>
+    `;
+    
+    showToast(`Route to ${bank.name}: ${distance} km, ~${time} min`, 'success');
+  });
+  
+  routingControl.on('routingerror', function(e) {
+    console.error('Routing error:', e);
+    showToast('Could not calculate route. Showing straight line distance.', 'error');
+    
+    // Show straight line instead
+    const routePanel = document.getElementById('routeInfoPanel');
+    routePanel.style.display = 'block';
+    document.getElementById('routeDetails').innerHTML = `
+      <p><strong>${bank.name}</strong></p>
+      <p><i class="fas fa-route"></i> Straight-line Distance: ${bank.distance} km</p>
+      <p><i class="fas fa-clock"></i> Estimated Time: ${bank.estimatedTime}</p>
+      <p><i class="fas fa-tint"></i> Available: ${bank.availableUnits} units of ${selectedBloodGroup}</p>
+      <p><i class="fas fa-phone"></i> <a href="tel:${bank.contactNumber}">${bank.contactNumber}</a></p>
+    `;
+  });
+  
+  // Fit map to show route
+  const bounds = L.latLngBounds([
+    [userLocation.lat, userLocation.lng],
+    [bank.latitude, bank.longitude]
+  ]);
+  leafletMap.fitBounds(bounds, { padding: [50, 50] });
+}
+
+// Calculate distance between two points (Haversine formula) - client-side for reference
 function calculateDistance(point1, point2) {
   const R = 6371; // Earth's radius in km
   const dLat = (point2.lat - point1.lat) * Math.PI / 180;
@@ -747,45 +834,32 @@ function calculateDistance(point1, point2) {
   return R * c;
 }
 
-// Show directions to a blood bank
-function showDirections(destLat, destLng, placeName) {
-  const destination = { lat: destLat, lng: destLng };
-  
-  const request = {
-    origin: userLocation,
-    destination: destination,
-    travelMode: google.maps.TravelMode.DRIVING
-  };
-  
-  directionsService.route(request, (result, status) => {
-    if (status === google.maps.DirectionsStatus.OK) {
-      directionsRenderer.setDirections(result);
-      
-      // Show route info
-      const route = result.routes[0].legs[0];
-      showToast(`${placeName}: ${route.distance.text}, ${route.duration.text}`, 'success');
-      
-      // Fit map to show entire route
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend(userLocation);
-      bounds.extend(destination);
-      map.fitBounds(bounds);
-    } else {
-      showToast('Could not calculate directions', 'error');
-    }
-  });
-}
-
 // Close blood bank results
 function closeBloodBankResults() {
   document.getElementById('bloodBankResultsModal').style.display = 'none';
-  // Clear directions
-  if (directionsRenderer) {
-    directionsRenderer.setDirections({ routes: [] });
+  document.getElementById('routeInfoPanel').style.display = 'none';
+  // Clear routing control
+  if (routingControl && leafletMap) {
+    leafletMap.removeControl(routingControl);
+    routingControl = null;
   }
 }
 
 // Refresh search
 function refreshSearch() {
-  searchNearbyBloodBanks();
+  searchBloodBanks();
 }
+
+// Seed blood banks on first load (for development)
+async function seedBloodBanksIfNeeded() {
+  try {
+    const res = await fetch('/api/bloodbanks/seed', { method: 'POST' });
+    const data = await res.json();
+    console.log('Seed blood banks:', data);
+  } catch (err) {
+    console.log('Blood banks already exist or seed failed');
+  }
+}
+
+// Call seed on page load
+seedBloodBanksIfNeeded();

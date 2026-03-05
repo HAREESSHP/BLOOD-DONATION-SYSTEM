@@ -230,6 +230,8 @@
                 <div class="form-group">
                     <label for="hospitalLocation">Hospital Location *</label>
                     <input type="text" id="hospitalLocation" name="hospitalLocation" placeholder="Enter hospital address" required>
+                    <input type="hidden" id="patientLatitude" name="patientLatitude">
+                    <input type="hidden" id="patientLongitude" name="patientLongitude">
                     <button type="button" class="btn-location" onclick="getCurrentLocation('receiver')">
                         <i class="fas fa-map-marker-alt"></i> Use Current Location
                     </button>
@@ -356,9 +358,25 @@
             <h2><i class="fas fa-search-location"></i> Find Nearby Blood Banks</h2>
             
             <div class="search-bb-container">
-                <!-- Step 1: Location Input -->
-                <div id="locationStep" class="search-step active">
-                    <h3><span class="step-number">1</span> Set Your Location</h3>
+                <!-- Step 1: Blood Group Selection -->
+                <div id="bloodGroupStep" class="search-step active">
+                    <h3><span class="step-number">1</span> Select Required Blood Group</h3>
+                    
+                    <div class="blood-group-options">
+                        <button class="blood-group-btn" data-group="A+" onclick="selectBloodGroup('A+')">A+</button>
+                        <button class="blood-group-btn" data-group="A-" onclick="selectBloodGroup('A-')">A-</button>
+                        <button class="blood-group-btn" data-group="B+" onclick="selectBloodGroup('B+')">B+</button>
+                        <button class="blood-group-btn" data-group="B-" onclick="selectBloodGroup('B-')">B-</button>
+                        <button class="blood-group-btn" data-group="AB+" onclick="selectBloodGroup('AB+')">AB+</button>
+                        <button class="blood-group-btn" data-group="AB-" onclick="selectBloodGroup('AB-')">AB-</button>
+                        <button class="blood-group-btn" data-group="O+" onclick="selectBloodGroup('O+')">O+</button>
+                        <button class="blood-group-btn" data-group="O-" onclick="selectBloodGroup('O-')">O-</button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Location Input -->
+                <div id="locationStep" class="search-step">
+                    <h3><span class="step-number">2</span> Set Your Location</h3>
                     
                     <div class="location-options">
                         <button class="btn btn-primary" onclick="useCurrentLocation()">
@@ -368,6 +386,7 @@
                         <div class="form-group">
                             <label for="manualLocation">Enter Location Manually</label>
                             <input type="text" id="manualLocation" placeholder="Enter city, area, or address...">
+                            <small style="color: #666;">Format: "latitude, longitude" or use current location</small>
                         </div>
                     </div>
                     
@@ -377,21 +396,15 @@
                     </div>
                 </div>
                 
-                <!-- Step 2: Radius Selection -->
+                <!-- Step 3: Radius Selection -->
                 <div id="radiusStep" class="search-step">
-                    <h3><span class="step-number">2</span> Select Search Radius</h3>
+                    <h3><span class="step-number">3</span> Select Search Radius</h3>
                     
                     <div class="radius-options">
-                        <button class="radius-btn" data-radius="2" onclick="selectRadius(2)">2 km</button>
                         <button class="radius-btn" data-radius="5" onclick="selectRadius(5)">5 km</button>
                         <button class="radius-btn active" data-radius="10" onclick="selectRadius(10)">10 km</button>
-                        <button class="radius-btn" data-radius="20" onclick="selectRadius(20)">20 km</button>
+                        <button class="radius-btn" data-radius="25" onclick="selectRadius(25)">25 km</button>
                         <button class="radius-btn" data-radius="50" onclick="selectRadius(50)">50 km</button>
-                    </div>
-                    
-                    <div class="custom-radius">
-                        <label for="customRadius">Or enter custom radius (km):</label>
-                        <input type="number" id="customRadius" min="1" max="100" placeholder="e.g., 15">
                     </div>
                 </div>
                 
@@ -407,7 +420,7 @@
     <div id="bloodBankResultsModal" class="modal">
         <div class="modal-content modal-fullscreen">
             <span class="close" onclick="closeBloodBankResults()">&times;</span>
-            <h2><i class="fas fa-hospital"></i> Nearby Blood Banks</h2>
+            <h2><i class="fas fa-hospital"></i> Nearby Blood Banks with <span id="searchedBloodGroup">Blood</span> Available</h2>
             
             <div class="bb-results-container">
                 <!-- Map Container -->
@@ -421,6 +434,13 @@
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
                     </div>
+                    
+                    <!-- Route Info Panel -->
+                    <div id="routeInfoPanel" class="route-info-panel" style="display: none;">
+                        <h4><i class="fas fa-route"></i> Route Information</h4>
+                        <div id="routeDetails"></div>
+                    </div>
+                    
                     <div id="bloodBanksList" class="bb-list"></div>
                 </div>
             </div>
@@ -433,8 +453,11 @@
         </div>
     </footer>
 
-    <!-- Google Maps API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&libraries=places&callback=initMap" async defer></script>
+    <!-- Leaflet.js CSS & JS for OpenStreetMap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     
     <script src="app.js"></script>
     <script src="firebase-config.js"></script>
